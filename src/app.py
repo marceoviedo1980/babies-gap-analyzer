@@ -16,6 +16,8 @@ def cargar_datos_db():
     response = supabase.table('casos_perinatales').select("*").execute()
     if response.data:
         df = pd.DataFrame(response.data)
+        if 'fecha_registro' in df.columns:
+         df['fecha_registro'] = pd.to_datetime(df['fecha_registro']).dt.strftime('%d/%m/%Y')
         df['clasificacion'] = df.apply(
             lambda row: clasificar_caso(row['peso'], row['tipo_muerte']), axis=1
         )
@@ -39,7 +41,9 @@ st.title("📊 Registro y Analisis de Mortalidad Perinatal - Metodo BABIES")
 st.caption("Datos guardados de forma segura y permanente en la nube.")
 
 with st.sidebar:
-    st.header("📝 Registrar Nuevo Caso")
+    st.markdown("# 📋 MENÚ DE REGISTRO")
+    st.markdown("Complete los datos y presione **Guardar Caso**")
+    st.markdown("---")
     with st.form("formulario_caso"):
         peso = st.number_input("Peso al nacer (g)", min_value=0, value=2500, step=100)
         tipo_muerte = st.selectbox("Tipo de muerte", ["Fetal", "Neonatal"])
@@ -66,13 +70,16 @@ with tab_ver:
         else:
             df_ordenado = df
         st.dataframe(df_ordenado[columnas_mostrar].head(20), use_container_width=True)
-        
-        csv = df.to_csv(index=False).encode('utf-8')
+        from io import BytesIO
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Casos Perinatales')
+        excel_data = output.getvalue()
         st.download_button(
-            label="⬇️ Descargar base de datos (CSV)",
-            data=csv,
-            file_name='casos_perinatales.csv',
-            mime='text/csv'
+            label="⬇️ Descargar base de datos (Excel)",
+            data=excel_data,
+            file_name='casos_perinatales.xlsx',
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
     else:
         st.info("Aun no hay casos registrados. Usa el panel lateral para añadir el primero.")
