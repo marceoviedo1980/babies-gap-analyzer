@@ -4,7 +4,22 @@ from supabase import create_client, Client
 from babies_calculator import clasificar_caso, calcular_brecha
 import plotly.express as px
 
-st.set_page_config(page_title="BABIES Analisis", page_icon="📊", layout="wide")
+st.markdown("""
+<style>
+    [data-testid="stSidebar"] {
+        background-color: #e8f5e9;
+    }
+    [data-testid="stSidebarCollapseButton"] {
+        background-color: #2e7d32;
+        color: white !important;
+        border-radius: 10px;
+        font-size: 20px;
+        padding: 5px 10px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+st.set_page_config(page_title="BABIES Analisis", page_icon="📊", layout="wide", initial_sidebar_state="expanded")
 
 SUPABASE_URL = "https://ocmjkntwnkyoggjgshah.supabase.co"
 SUPABASE_KEY = "sb_publishable_LUI7t1qJUdU86VE_cxYo7w_7xlkCfVi"
@@ -17,7 +32,7 @@ def cargar_datos_db():
     if response.data:
         df = pd.DataFrame(response.data)
         if 'fecha_registro' in df.columns:
-         df['fecha_registro'] = pd.to_datetime(df['fecha_registro']).dt.strftime('%d/%m/%Y')
+            df['fecha_registro'] = pd.to_datetime(df['fecha_registro']).dt.strftime('%d/%m/%Y')
         df['clasificacion'] = df.apply(
             lambda row: clasificar_caso(row['peso'], row['tipo_muerte']), axis=1
         )
@@ -70,6 +85,7 @@ with tab_ver:
         else:
             df_ordenado = df
         st.dataframe(df_ordenado[columnas_mostrar].head(20), use_container_width=True)
+        
         from io import BytesIO
         output = BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
