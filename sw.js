@@ -1,10 +1,9 @@
-const CACHE = 'babies-pwa-v4';
+const CACHE = 'babies-pwa-v5';
 
 const ASSETS = [
   './',
   './index.html',
-  './manifest.json',
-  './icon-192.png'
+  './manifest.json'
 ];
 
 // INSTALL
@@ -28,29 +27,13 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
-// FETCH (estrategia: stale-while-revalidate)
+// FETCH
 self.addEventListener('fetch', e => {
-
   if (e.request.method !== 'GET') return;
 
-  // Ignorar Supabase
   if (e.request.url.includes('supabase')) return;
 
   e.respondWith(
-    caches.match(e.request).then(cached => {
-
-      const fetchPromise = fetch(e.request)
-        .then(networkResponse => {
-          // Guardar copia actualizada en caché
-          return caches.open(CACHE).then(cache => {
-            cache.put(e.request, networkResponse.clone());
-            return networkResponse;
-          });
-        })
-        .catch(() => cached); // fallback offline
-
-      // Si hay caché → mostrar rápido
-      return cached || fetchPromise;
-    })
+    caches.match(e.request).then(cached => cached || fetch(e.request))
   );
 });
