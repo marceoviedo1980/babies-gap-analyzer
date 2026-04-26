@@ -1,4 +1,4 @@
-const CACHE = 'babies-pwa-v3';
+const CACHE = 'babies-pwa-v4';
 
 const ASSETS = [
   './',
