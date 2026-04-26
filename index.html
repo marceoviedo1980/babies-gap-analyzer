@@ -11,6 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -487,96 +488,167 @@ function makeSheet(rows, colWidths) {
 // ══════════════════════════════════════════
 //  EXPORTAR EXCEL
 // ══════════════════════════════════════════
-function exportarExcel() {
+async function exportarExcel() {
   const a = document.getElementById('fil-anio').value;
   const d = document.getElementById('fil-dist').value;
+
   const datos = todos.filter(c => {
     if (a && String(c.año)!==a) return false;
-    if (d && c.distrito!==d)   return false;
+    if (d && c.distrito!==d) return false;
     return true;
   });
-  if (!datos.length) { toast('⚠️ Sin datos para exportar',true); return; }
 
-  const wb = XLSX.utils.book_new();
-  const fmtF = f => f ? new Date(f+'T12:00:00').toLocaleDateString('es-BO') : '';
+  if (!datos.length) {
+    toast('⚠️ Sin datos para exportar', true);
+    return;
+  }
 
-  // ═══ HOJA 1: BASE DE DATOS ═══
-  const heads1 = ['ID','Fecha Evento','Establecimiento','Red/Municipio','Peso (g)','Tipo Muerte','Momento Muerte','Distrito','Año','Clasif.','Area BABIES','Fecha Registro'];
-  const ws1rows = [
-    [c('REPORTE DE MORTALIDAD PERINATAL - METODO BABIES', S.tit)],
-    [c('Base de datos exportada desde la aplicacion', S.sub)],
-    heads1.map(h => c(h, S.hdr)),
-    ...datos.map(x => [
-      c(x.id,                          S.normC),
-      c(fmtF(x.fecha_evento),          S.norm),
-      c(x.establecimiento||'',         S.norm),
-      c(x.red_municipio||'',           S.norm),
-      c(x.peso,                        S.normC),
-      c(x.tipo_muerte,                 S.norm),
-      c(x.momento_muerte||'',          S.norm),
-      c(x.distrito||'',                S.norm),
-      c(x.año,                         S.normC),
-      c(x.clasificacion,               SCEL[x.clasificacion]||S.norm),
-      c(AREAS[x.clasificacion]||'',    SCEL[x.clasificacion]||S.norm),
-      c(fmtF(x.fecha_registro),        S.norm),
-    ])
+  const wb = new ExcelJS.Workbook();
+
+  const COLORS = {
+    verde: 'FF0F6E5B',
+    gris: 'FFEEEEEE',
+    borde: 'FFBDBDBD',
+    A: 'FFC8E6C9',
+    B: 'FFBBDEFB',
+    C: 'FFFFF9C4',
+    D: 'FFFCE4EC'
+  };
+
+  const AREAS = {
+    A:'Salud Materna',
+    B:'Cuidado durante el Parto',
+    C:'Cuidado durante el Embarazo',
+    D:'Cuidado del Recién Nacido'
+  };
+
+  const borderAll = {
+    top:{style:'thin',color:{argb:COLORS.borde}},
+    left:{style:'thin',color:{argb:COLORS.borde}},
+    bottom:{style:'thin',color:{argb:COLORS.borde}},
+    right:{style:'thin',color:{argb:COLORS.borde}}
+  };
+
+  // ═══════════════ HOJA: INFORME ═══════════════
+  const ws = wb.addWorksheet('Informe BABIES');
+
+  ws.columns = [
+    { width:5 },
+    { width:25 },
+    { width:25 },
+    { width:15 },
+    { width:15 }
   ];
-  XLSX.utils.book_append_sheet(wb, makeSheet(ws1rows,[6,13,26,16,9,12,16,14,7,9,26,13]), 'Base de Datos');
 
-  // ═══ HOJA 2: RESUMEN BABIES ═══
-  const ws2rows = [
-    [c('RESUMEN DE AREAS BABIES', S.tit)],
-    [c('Clasificacion automatica por peso y tipo de muerte', S.sub)],
-    [c('Clasificacion',S.hdr), c('Area BABIES',S.hdr), c('Casos',S.hdr)],
-    ...['A','B','C','D'].map(cel => {
-      const n = datos.filter(x=>x.clasificacion===cel).length;
-      return [c(cel,SCEL[cel]), c(AREAS[cel],SCEL[cel]), c(n,SCEL[cel])];
-    }),
-    [c('TOTAL DE CASOS',S.tot), c('',S.tot), c(datos.length,S.tot)]
-  ];
-  XLSX.utils.book_append_sheet(wb, makeSheet(ws2rows,[16,34,10]), 'Resumen BABIES');
+  // 🏥 ENCABEZADO INSTITUCIONAL
+  ws.mergeCells('A1:E1');
+  ws.getCell('A1').value = 'ESTADO PLURINACIONAL DE BOLIVIA';
+  ws.getCell('A1').alignment = { horizontal:'center' };
 
-  // ═══ HOJA 3: MATRIZ BABIES ═══
-  const cnt = (p,t) => datos.filter(x=>(p==='lt'?x.peso<2500:x.peso>=2500)&&x.tipo_muerte===t).length;
-  const ws3rows = [
-    [c('MATRIZ BABIES SIMPLIFICADA', S.tit)],
-    [c('Distribucion de muertes por grupo de peso y tipo de muerte', S.sub)],
-    [c('Grupos de peso',S.hdr), c('Fetal',S.hdr), c('Neonatal',S.hdr), c('Total muertes',S.hdr)],
-    [c('< 2500 g',S.C),  c(cnt('lt','Fetal'),S.C),  c(cnt('lt','Neonatal'),S.D),  c(cnt('lt','Fetal')+cnt('lt','Neonatal'),S.normC)],
-    [c('>= 2500 g',S.A), c(cnt('gte','Fetal'),S.A), c(cnt('gte','Neonatal'),S.B), c(cnt('gte','Fetal')+cnt('gte','Neonatal'),S.normC)],
-    [c('TOTAL GENERAL',S.tot), c(datos.filter(x=>x.tipo_muerte==='Fetal').length,S.tot), c(datos.filter(x=>x.tipo_muerte==='Neonatal').length,S.tot), c(datos.length,S.tot)]
-  ];
-  XLSX.utils.book_append_sheet(wb, makeSheet(ws3rows,[16,12,12,14]), 'Matriz BABIES');
+  ws.mergeCells('A2:E2');
+  ws.getCell('A2').value = 'MINISTERIO DE SALUD Y DEPORTES';
+  ws.getCell('A2').alignment = { horizontal:'center' };
 
-  // ═══ HOJA 4: MATRIZ MOMENTOS ═══
-  const MOM  = ['Anteparto','Intraparto','Prealta','Postalta'];
-  const cntM = (p,m) => datos.filter(x=>(p==='lt'?x.peso<2500:x.peso>=2500)&&x.momento_muerte===m).length;
-  const ws4rows = [
-    [c('MATRIZ POR MOMENTO DE MUERTE', S.tit)],
-    [c('Distribucion por peso y momento: anteparto, intraparto, prealta y postalta', S.sub)],
-    [c('Peso al nacer',S.hdr), ...MOM.map((m,i)=>c(m,S[SMOM[i]])), c('Total',S.hdr)],
-    [c('< 2500 g',S.C),  ...MOM.map((m,i)=>c(cntM('lt',m),S[SMOM[i]])),  c(MOM.reduce((s,m)=>s+cntM('lt',m),0),S.normC)],
-    [c('>= 2500 g',S.A), ...MOM.map((m,i)=>c(cntM('gte',m),S[SMOM[i]])), c(MOM.reduce((s,m)=>s+cntM('gte',m),0),S.normC)],
-    [c('TOTAL GENERAL',S.tot), ...MOM.map(m=>c(datos.filter(x=>x.momento_muerte===m).length,S.tot)), c(datos.length,S.tot)]
-  ];
-  XLSX.utils.book_append_sheet(wb, makeSheet(ws4rows,[16,13,13,13,13,10]), 'Matriz Momentos');
+  ws.mergeCells('A3:E3');
+  ws.getCell('A3').value = 'HOSPITAL MUNICIPAL LA PORTADA';
+  ws.getCell('A3').alignment = { horizontal:'center' };
 
-  // ═══ HOJA 5: INDICADORES ═══
-  const tot5 = datos.length||1;
-  const ws5rows = [
-    [c('INDICADORES BABIES', S.tit)],
-    [c('Resumen de casos por area de intervencion', S.sub)],
-    [c('Codigo',S.hdr), c('Area BABIES',S.hdr), c('Casos',S.hdr), c('Porcentaje (%)',S.hdr)],
-    ...['A','B','C','D'].map(cel => {
-      const n = datos.filter(x=>x.clasificacion===cel).length;
-      return [c(cel,SCEL[cel]), c(AREAS[cel],SCEL[cel]), c(n,SCEL[cel]), c(+(n/tot5*100).toFixed(2),SCEL[cel])];
-    }),
-    [c('TOTAL',S.tot), c('',S.tot), c(datos.length,S.tot), c(100,S.tot)]
-  ];
-  XLSX.utils.book_append_sheet(wb, makeSheet(ws5rows,[10,34,10,14]), 'Indicadores');
+  ws.mergeCells('A5:E5');
+  const title = ws.getCell('A5');
+  title.value = 'REPORTE DE MORTALIDAD PERINATAL – MÉTODO BABIES';
+  title.font = { bold:true, size:14 };
+  title.alignment = { horizontal:'center' };
 
-  XLSX.writeFile(wb, `BABIES_${new Date().toISOString().slice(0,10)}.xlsx`);
-  toast('📥 Excel con colores descargado');
+  ws.addRow([]);
+
+  // 📊 TABLA PRINCIPAL
+  ws.addRow(['','Celda','Área','Casos','%']);
+
+  const headerRow = ws.lastRow;
+  headerRow.eachCell(c => {
+    c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:COLORS.verde}};
+    c.font = { bold:true, color:{argb:'FFFFFFFF'} };
+    c.alignment = { horizontal:'center' };
+    c.border = borderAll;
+  });
+
+  const startDataRow = ws.lastRow.number + 1;
+
+  ['A','B','C','D'].forEach(c => {
+    const n = datos.filter(x=>x.clasificacion===c).length;
+
+    const row = ws.addRow(['',c,AREAS[c],n,null]);
+
+    row.eachCell(cell => cell.border = borderAll);
+
+    // color celda
+    row.getCell(2).fill = { type:'pattern', pattern:'solid', fgColor:{argb:COLORS[c]} };
+    row.getCell(3).fill = { type:'pattern', pattern:'solid', fgColor:{argb:COLORS[c]} };
+
+  });
+
+  const endDataRow = ws.lastRow.number;
+
+  // 🔢 TOTAL
+  const totalRow = ws.addRow(['','TOTAL','', {formula:`SUM(D${startDataRow}:D${endDataRow})`}, '100%']);
+  totalRow.eachCell(c => {
+    c.font = { bold:true };
+    c.border = borderAll;
+  });
+
+  // 📈 PORCENTAJES (FORMULAS REALES)
+  for (let i = startDataRow; i <= endDataRow; i++) {
+    ws.getCell(`E${i}`).value = {
+      formula: `D${i}/D${endDataRow+1}`
+    };
+    ws.getCell(`E${i}`).numFmt = '0.00%';
+    ws.getCell(`E${i}`).border = borderAll;
+  }
+
+  // ═══════════════ SEGUNDA SECCIÓN ═══════════════
+  ws.addRow([]);
+  ws.addRow(['','MATRIZ BABIES']);
+  ws.lastRow.font = { bold:true };
+
+  ws.addRow(['','Peso','Fetal','Neonatal','Total']).eachCell(c=>{
+    c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:COLORS.gris}};
+    c.border = borderAll;
+  });
+
+  const cnt = (cond) => datos.filter(cond).length;
+
+  const r1 = ws.addRow([
+    '',
+    '<2500',
+    cnt(x=>x.peso<2500 && x.tipo_muerte==='Fetal'),
+    cnt(x=>x.peso<2500 && x.tipo_muerte==='Neonatal'),
+    cnt(x=>x.peso<2500)
+  ]);
+  r1.eachCell(c=>c.border=borderAll);
+
+  const r2 = ws.addRow([
+    '',
+    '≥2500',
+    cnt(x=>x.peso>=2500 && x.tipo_muerte==='Fetal'),
+    cnt(x=>x.peso>=2500 && x.tipo_muerte==='Neonatal'),
+    cnt(x=>x.peso>=2500)
+  ]);
+  r2.eachCell(c=>c.border=borderAll);
+
+  // 📥 DESCARGA
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  });
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `REPORTE_BABIES_${new Date().toISOString().slice(0,10)}.xlsx`;
+  link.click();
+  URL.revokeObjectURL(url);
+
+  toast('📥 Informe oficial generado');
 }
 
 // ══════════════════════════════════════════
