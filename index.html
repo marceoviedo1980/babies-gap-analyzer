@@ -428,7 +428,7 @@ async function eliminar(id) {
 // ══════════════════════════════════════════
 //  EXCEL CON COLORES (xlsx-js-style)
 // ══════════════════════════════════════════
-function sty(rgb_bg, rgb_fg, bold=false, center=false) {
+ function sty(rgb_bg, rgb_fg, bold=false, center=false) {
   return {
     font: { name:'Calibri', sz:10, bold, color:{ rgb: rgb_fg } },
     fill: { patternType:'solid', fgColor:{ rgb: rgb_bg } },
@@ -489,180 +489,64 @@ function makeSheet(rows, colWidths) {
 //  EXPORTAR EXCEL
 // ══════════════════════════════════════════
 async function exportarExcel() {
-  const a = document.getElementById('fil-anio').value;
-  const d = document.getElementById('fil-dist').value;
+  try {
+    if (typeof ExcelJS === 'undefined') {
+      alert('ExcelJS no está cargado');
+      return;
+    }
 
-  const datos = todos.filter(c => {
-    if (a && String(c.año)!==a) return false;
-    if (d && c.distrito!==d) return false;
-    return true;
-  });
+    const workbook = new ExcelJS.Workbook();
 
-  if (!datos.length) {
-    toast('⚠️ Sin datos para exportar', true);
-    return;
+    // ===== HOJA 1 =====
+    const ws1 = workbook.addWorksheet('Base de Datos');
+    ws1.addRow(['ID','Peso','Tipo','Celda']);
+    todos.forEach(x => {
+      ws1.addRow([x.id, x.peso, x.tipo_muerte, x.clasificacion]);
+    });
+
+    // ===== HOJA 2 =====
+    const ws2 = workbook.addWorksheet('Resumen');
+    ws2.addRow(['Celda','Casos']);
+    ['A','B','C','D'].forEach(c => {
+      const n = todos.filter(x=>x.clasificacion===c).length;
+      ws2.addRow([c,n]);
+    });
+
+    // ===== HOJA 3 =====
+    workbook.addWorksheet('Matriz');
+
+    // ===== HOJA 4 =====
+    workbook.addWorksheet('Momentos');
+
+    // ===== HOJA 5 =====
+    workbook.addWorksheet('Indicadores');
+
+    // ===== DESCARGA =====
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'BABIES.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    window.URL.revokeObjectURL(url);
+
+    toast('📥 Excel descargado');
+
+  } catch (err) {
+    console.error(err);
+    alert('Error al exportar: ' + err.message);
   }
-
-  const wb = new ExcelJS.Workbook();
-
-  const COLORS = {
-    verde: 'FF0F6E5B',
-    gris: 'FFEEEEEE',
-    borde: 'FFBDBDBD',
-    A: 'FFC8E6C9',
-    B: 'FFBBDEFB',
-    C: 'FFFFF9C4',
-    D: 'FFFCE4EC'
-  };
-
-  const AREAS = {
-    A:'Salud Materna',
-    B:'Cuidado durante el Parto',
-    C:'Cuidado durante el Embarazo',
-    D:'Cuidado del Recién Nacido'
-  };
-
-  const borderAll = {
-    top:{style:'thin',color:{argb:COLORS.borde}},
-    left:{style:'thin',color:{argb:COLORS.borde}},
-    bottom:{style:'thin',color:{argb:COLORS.borde}},
-    right:{style:'thin',color:{argb:COLORS.borde}}
-  };
-
-  // ═══════════════ HOJA: INFORME ═══════════════
-  const ws = wb.addWorksheet('Informe BABIES');
-
-  ws.columns = [
-    { width:5 },
-    { width:25 },
-    { width:25 },
-    { width:15 },
-    { width:15 }
-  ];
-
-  // 🏥 ENCABEZADO INSTITUCIONAL
-  ws.mergeCells('A1:E1');
-  ws.getCell('A1').value = 'ESTADO PLURINACIONAL DE BOLIVIA';
-  ws.getCell('A1').alignment = { horizontal:'center' };
-
-  ws.mergeCells('A2:E2');
-  ws.getCell('A2').value = 'MINISTERIO DE SALUD Y DEPORTES';
-  ws.getCell('A2').alignment = { horizontal:'center' };
-
-  ws.mergeCells('A3:E3');
-  ws.getCell('A3').value = 'HOSPITAL MUNICIPAL LA PORTADA';
-  ws.getCell('A3').alignment = { horizontal:'center' };
-
-  ws.mergeCells('A5:E5');
-  const title = ws.getCell('A5');
-  title.value = 'REPORTE DE MORTALIDAD PERINATAL – MÉTODO BABIES';
-  title.font = { bold:true, size:14 };
-  title.alignment = { horizontal:'center' };
-
-  ws.addRow([]);
-
-  // 📊 TABLA PRINCIPAL
-  ws.addRow(['','Celda','Área','Casos','%']);
-
-  const headerRow = ws.lastRow;
-  headerRow.eachCell(c => {
-    c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:COLORS.verde}};
-    c.font = { bold:true, color:{argb:'FFFFFFFF'} };
-    c.alignment = { horizontal:'center' };
-    c.border = borderAll;
-  });
-
-  const startDataRow = ws.lastRow.number + 1;
-
-  ['A','B','C','D'].forEach(c => {
-    const n = datos.filter(x=>x.clasificacion===c).length;
-
-    const row = ws.addRow(['',c,AREAS[c],n,null]);
-
-    row.eachCell(cell => cell.border = borderAll);
-
-    // color celda
-    row.getCell(2).fill = { type:'pattern', pattern:'solid', fgColor:{argb:COLORS[c]} };
-    row.getCell(3).fill = { type:'pattern', pattern:'solid', fgColor:{argb:COLORS[c]} };
-
-  });
-
-  const endDataRow = ws.lastRow.number;
-
-  // 🔢 TOTAL
-  const totalRow = ws.addRow(['','TOTAL','', {formula:`SUM(D${startDataRow}:D${endDataRow})`}, '100%']);
-  totalRow.eachCell(c => {
-    c.font = { bold:true };
-    c.border = borderAll;
-  });
-
-  // 📈 PORCENTAJES (FORMULAS REALES)
-  for (let i = startDataRow; i <= endDataRow; i++) {
-    ws.getCell(`E${i}`).value = {
-      formula: `D${i}/D${endDataRow+1}`
-    };
-    ws.getCell(`E${i}`).numFmt = '0.00%';
-    ws.getCell(`E${i}`).border = borderAll;
-  }
-
-  // ═══════════════ SEGUNDA SECCIÓN ═══════════════
-  ws.addRow([]);
-  ws.addRow(['','MATRIZ BABIES']);
-  ws.lastRow.font = { bold:true };
-
-  ws.addRow(['','Peso','Fetal','Neonatal','Total']).eachCell(c=>{
-    c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:COLORS.gris}};
-    c.border = borderAll;
-  });
-
-  const cnt = (cond) => datos.filter(cond).length;
-
-  const r1 = ws.addRow([
-    '',
-    '<2500',
-    cnt(x=>x.peso<2500 && x.tipo_muerte==='Fetal'),
-    cnt(x=>x.peso<2500 && x.tipo_muerte==='Neonatal'),
-    cnt(x=>x.peso<2500)
-  ]);
-  r1.eachCell(c=>c.border=borderAll);
-
-  const r2 = ws.addRow([
-    '',
-    '≥2500',
-    cnt(x=>x.peso>=2500 && x.tipo_muerte==='Fetal'),
-    cnt(x=>x.peso>=2500 && x.tipo_muerte==='Neonatal'),
-    cnt(x=>x.peso>=2500)
-  ]);
-  r2.eachCell(c=>c.border=borderAll);
-
-  // 📥 DESCARGA
-  const buffer = await wb.xlsx.writeBuffer();
-  const blob = new Blob([buffer], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-  });
-
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `REPORTE_BABIES_${new Date().toISOString().slice(0,10)}.xlsx`;
-  link.click();
-  URL.revokeObjectURL(url);
-
-  toast('📥 Informe oficial generado');
 }
-const buffer = await workbook.xlsx.writeBuffer();
-
-const blob = new Blob([buffer], {
-  type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-});
-
-const url = window.URL.createObjectURL(blob);
-const a = document.createElement("a");
-a.href = url;
-a.download = `BABIES_${new Date().toISOString().slice(0,10)}.xlsx`;
-a.click();
-
-window.URL.revokeObjectURL(url);
+  
 // ══════════════════════════════════════════
 //  ANÁLISIS
 // ══════════════════════════════════════════
