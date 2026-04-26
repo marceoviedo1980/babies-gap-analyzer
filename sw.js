@@ -1,11 +1,10 @@
-const CACHE = 'babies-pwa-v5';
-
+const CACHE = 'babies-pwa-v6';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json'
 ];
-
+ 
 // INSTALL
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -13,8 +12,8 @@ self.addEventListener('install', e => {
   );
   self.skipWaiting();
 });
-
-// ACTIVATE
+ 
+// ACTIVATE — elimina caches viejos
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -26,13 +25,12 @@ self.addEventListener('activate', e => {
   );
   self.clients.claim();
 });
-
-// FETCH
+ 
+// FETCH — cache-first para assets locales, network-first para Supabase
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
-
   if (e.request.url.includes('supabase')) return;
-
+  if (e.request.url.includes('cdn.jsdelivr.net')) return; // CDN siempre desde red
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request))
   );
