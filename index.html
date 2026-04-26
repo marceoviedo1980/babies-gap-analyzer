@@ -259,6 +259,9 @@
 </main>
 <div id="toast"></div>
 
+<!-- ══════════════════════════════════════════════════════════
+     ÚNICO BLOQUE SCRIPT — no agregar más <script> aquí dentro
+     ══════════════════════════════════════════════════════════ -->
 <script>
 // ══════════════════════════════════════════
 //  CONFIG
@@ -268,25 +271,30 @@ const db = createClient(
   'https://ocmjkntwnkyoggjgshah.supabase.co',
   'sb_publishable_LUI7t1qJUdU86VE_cxYo7w_7xlkCfVi'
 );
-const AREAS = { A:'Salud Materna', B:'Cuidado durante el Parto', C:'Cuidado durante el Embarazo', D:'Cuidado del Recién Nacido' };
+const AREAS = {
+  A: 'Salud Materna',
+  B: 'Cuidado durante el Parto',
+  C: 'Cuidado durante el Embarazo',
+  D: 'Cuidado del Recién Nacido'
+};
 
 let todos = [];
-let cBrecha=null, cHist=null, cMom=null;
+let cBrecha = null, cHist = null, cMom = null;
 
 // ══════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
-  document.getElementById('inp-fecha').value = new Date().toISOString().slice(0,10);
+  document.getElementById('inp-fecha').value = new Date().toISOString().slice(0, 10);
   const año = new Date().getFullYear();
-  ['inp-anio','fil-anio','an-año','ind-año'].forEach(id => {
+  ['inp-anio', 'fil-anio', 'an-año', 'ind-año'].forEach(id => {
     const el = document.getElementById(id);
     if (id !== 'inp-anio') el.innerHTML = '<option value="">Todos los años</option>';
-    for (let a=año; a>=año-10; a--) el.innerHTML += `<option value="${a}">${a}</option>`;
+    for (let a = año; a >= año - 10; a--) el.innerHTML += `<option value="${a}">${a}</option>`;
   });
   previsualizar();
   await cargar();
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 });
 
 // ══════════════════════════════════════════
@@ -294,19 +302,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ══════════════════════════════════════════
 function clasif(peso, tipo) {
   const p = parseInt(peso);
-  if (!p || p<300) return null;
-  if (p>=2500 && tipo==='Fetal')    return 'A';
-  if (p>=2500 && tipo==='Neonatal') return 'B';
-  if (p<2500  && tipo==='Fetal')    return 'C';
-  if (p<2500  && tipo==='Neonatal') return 'D';
+  if (!p || p < 300) return null;
+  if (p >= 2500 && tipo === 'Fetal')    return 'A';
+  if (p >= 2500 && tipo === 'Neonatal') return 'B';
+  if (p < 2500  && tipo === 'Fetal')    return 'C';
+  if (p < 2500  && tipo === 'Neonatal') return 'D';
   return null;
 }
 
 function previsualizar() {
   const c = clasif(document.getElementById('inp-peso').value, document.getElementById('inp-tipo').value);
   const div = document.getElementById('badge');
-  if (!c) { div.style.display='none'; return; }
-  div.style.display='block';
+  if (!c) { div.style.display = 'none'; return; }
+  div.style.display = 'block';
   div.className = `badge-preview badge-${c}`;
   div.textContent = `Celda ${c} – ${AREAS[c]}`;
 }
@@ -315,35 +323,35 @@ function previsualizar() {
 //  GUARDAR
 // ══════════════════════════════════════════
 async function guardar() {
-  const peso   = parseInt(document.getElementById('inp-peso').value);
-  const tipo   = document.getElementById('inp-tipo').value;
-  const distri = document.getElementById('inp-distrito').value.trim();
-  const estab  = document.getElementById('inp-estab').value.trim();
-  const red    = document.getElementById('inp-red').value.trim();
-  const fecha  = document.getElementById('inp-fecha').value;
-  const año    = parseInt(document.getElementById('inp-anio').value);
+  const peso    = parseInt(document.getElementById('inp-peso').value);
+  const tipo    = document.getElementById('inp-tipo').value;
+  const distri  = document.getElementById('inp-distrito').value.trim();
+  const estab   = document.getElementById('inp-estab').value.trim();
+  const red     = document.getElementById('inp-red').value.trim();
+  const fecha   = document.getElementById('inp-fecha').value;
+  const año     = parseInt(document.getElementById('inp-anio').value);
   const momento = document.getElementById('inp-momento').value;
 
-  if (!peso||peso<300||peso>6000) { toast('⚠️ Peso inválido (300–6000 g)',true); return; }
-  if (!distri) { toast('⚠️ Ingresa el distrito',true); return; }
+  if (!peso || peso < 300 || peso > 6000) { toast('⚠️ Peso inválido (300–6000 g)', true); return; }
+  if (!distri) { toast('⚠️ Ingresa el distrito', true); return; }
 
   const clasificacion = clasif(peso, tipo);
   const area_babies   = AREAS[clasificacion];
 
   const btn = document.getElementById('btn-save');
-  btn.innerHTML='<span class="spinner"></span> Guardando...';
-  btn.disabled=true;
+  btn.innerHTML = '<span class="spinner"></span> Guardando...';
+  btn.disabled = true;
 
   const { error } = await db.from('casos_perinatales').insert([{
-    fecha_evento: fecha||null, año,
+    fecha_evento: fecha || null, año,
     establecimiento: estab, red_municipio: red, distrito: distri,
     peso, tipo_muerte: tipo, momento_muerte: momento,
     clasificacion, area_babies,
     fecha_registro: new Date().toISOString()
   }]);
 
-  btn.innerHTML='💾 Guardar Caso'; btn.disabled=false;
-  if (error) { console.error(error); toast('❌ '+error.message,true); }
+  btn.innerHTML = '💾 Guardar Caso'; btn.disabled = false;
+  if (error) { console.error(error); toast('❌ ' + error.message, true); }
   else { toast('✅ Caso guardado'); await cargar(); }
 }
 
@@ -351,7 +359,7 @@ async function guardar() {
 //  CARGAR
 // ══════════════════════════════════════════
 async function cargar() {
-  const { data, error } = await db.from('casos_perinatales').select('*').order('fecha_registro',{ascending:false});
+  const { data, error } = await db.from('casos_perinatales').select('*').order('fecha_registro', { ascending: false });
   if (error) { console.error(error); return; }
   todos = data || [];
   syncFiltros();
@@ -365,11 +373,11 @@ async function cargar() {
 //  FILTROS
 // ══════════════════════════════════════════
 function syncFiltros() {
-  const dists = [...new Set(todos.map(c=>c.distrito).filter(Boolean))].sort();
-  ['fil-dist','an-d1','an-d2','ind-dist','hist-dist'].forEach(id => {
+  const dists = [...new Set(todos.map(c => c.distrito).filter(Boolean))].sort();
+  ['fil-dist', 'an-d1', 'an-d2', 'ind-dist', 'hist-dist'].forEach(id => {
     const el = document.getElementById(id);
     const val = el.value;
-    const placeholder = (id==='an-d1'||id==='an-d2') ? '' : 'Todos los distritos';
+    const placeholder = (id === 'an-d1' || id === 'an-d2') ? '' : 'Todos los distritos';
     el.innerHTML = placeholder ? `<option value="">${placeholder}</option>` : '';
     dists.forEach(d => el.innerHTML += `<option value="${d}">${d}</option>`);
     if (val) el.value = val;
@@ -377,35 +385,35 @@ function syncFiltros() {
 }
 
 function getFiltered(aId, dId, cId) {
-  const a = document.getElementById(aId)?.value||'';
-  const d = document.getElementById(dId)?.value||'';
-  const c = document.getElementById(cId)?.value||'';
+  const a = document.getElementById(aId)?.value || '';
+  const d = document.getElementById(dId)?.value || '';
+  const c = document.getElementById(cId)?.value || '';
   return todos.filter(x => {
-    if (a && String(x.año)!==a)    return false;
-    if (d && x.distrito!==d)       return false;
-    if (c && x.clasificacion!==c)  return false;
+    if (a && String(x.año) !== a)   return false;
+    if (d && x.distrito !== d)      return false;
+    if (c && x.clasificacion !== c) return false;
     return true;
   });
 }
 
 function filtrar() {
-  const datos = getFiltered('fil-anio','fil-dist','fil-cel');
+  const datos = getFiltered('fil-anio', 'fil-dist', 'fil-cel');
   renderTabla(datos);
   document.getElementById('st-tot').textContent = datos.length;
-  document.getElementById('st-a').textContent  = datos.filter(c=>c.clasificacion==='A').length;
-  document.getElementById('st-b').textContent  = datos.filter(c=>c.clasificacion==='B').length;
-  document.getElementById('st-cd').textContent = datos.filter(c=>'CD'.includes(c.clasificacion)).length;
+  document.getElementById('st-a').textContent   = datos.filter(c => c.clasificacion === 'A').length;
+  document.getElementById('st-b').textContent   = datos.filter(c => c.clasificacion === 'B').length;
+  document.getElementById('st-cd').textContent  = datos.filter(c => 'CD'.includes(c.clasificacion)).length;
 }
 
 function renderTabla(datos) {
   const wrap = document.getElementById('tabla-wrap');
-  if (!datos.length) { wrap.innerHTML='<div class="empty"><span>📭</span>Sin casos</div>'; return; }
+  if (!datos.length) { wrap.innerHTML = '<div class="empty"><span>📭</span>Sin casos</div>'; return; }
   let h = `<table><thead><tr><th>Fecha</th><th>Establecimiento</th><th>Distrito</th><th>Peso</th><th>Tipo</th><th>Momento</th><th>Año</th><th>Celda</th><th></th></tr></thead><tbody>`;
   datos.forEach(c => {
     const f = c.fecha_evento
-      ? new Date(c.fecha_evento+'T12:00:00').toLocaleDateString('es-BO',{day:'2-digit',month:'2-digit',year:'2-digit'})
-      : (c.fecha_registro ? new Date(c.fecha_registro).toLocaleDateString('es-BO',{day:'2-digit',month:'2-digit',year:'2-digit'}) : '—');
-    h += `<tr><td>${f}</td><td>${c.establecimiento||'—'}</td><td>${c.distrito||'—'}</td><td>${c.peso}g</td><td>${c.tipo_muerte}</td><td>${c.momento_muerte||'—'}</td><td>${c.año}</td><td><span class="cel cel-${c.clasificacion}">${c.clasificacion}</span></td><td><button class="btn-del" onclick="eliminar(${c.id})">🗑</button></td></tr>`;
+      ? new Date(c.fecha_evento + 'T12:00:00').toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: '2-digit' })
+      : (c.fecha_registro ? new Date(c.fecha_registro).toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—');
+    h += `<tr><td>${f}</td><td>${c.establecimiento || '—'}</td><td>${c.distrito || '—'}</td><td>${c.peso}g</td><td>${c.tipo_muerte}</td><td>${c.momento_muerte || '—'}</td><td>${c.año}</td><td><span class="cel cel-${c.clasificacion}">${c.clasificacion}</span></td><td><button class="btn-del" onclick="eliminar(${c.id})">🗑</button></td></tr>`;
   });
   h += '</tbody></table>';
   wrap.innerHTML = h;
@@ -422,546 +430,319 @@ async function eliminar(id) {
 }
 
 // ══════════════════════════════════════════
-//  ESTILOS EXCEL (HTML→XLS con colores)
+//  EXCEL — helpers de estilo (xlsx-js-style)
 // ══════════════════════════════════════════
-// ══════════════════════════════════════════
-//  EXCEL CON COLORES (xlsx-js-style)
-// ══════════════════════════════════════════
- function sty(rgb_bg, rgb_fg, bold=false, center=false) {
-  return {
-    font: { name:'Calibri', sz:10, bold, color:{ rgb: rgb_fg } },
-    fill: { patternType:'solid', fgColor:{ rgb: rgb_bg } },
-    alignment: { horizontal: center?'center':'left', vertical:'center', wrapText:false },
-    border: {
-      top:   {style:'thin', color:{rgb:'CCCCCC'}},
-      bottom:{style:'thin', color:{rgb:'CCCCCC'}},
-      left:  {style:'thin', color:{rgb:'CCCCCC'}},
-      right: {style:'thin', color:{rgb:'CCCCCC'}}
-    }
-  };
-}
-// Estilos predefinidos
-const S = {
-  tit:   sty('0F6E5B','FFFFFF',true,true),
-  sub:   sty('E6F4F1','5A7A75',false,false),
-  hdr:   sty('0F6E5B','FFFFFF',true,true),
-  norm:  sty('FFFFFF','1A2E2B',false,false),
-  normC: sty('FFFFFF','1A2E2B',false,true),
-  tot:   sty('FFF9C4','000000',true,true),
-  A:     sty('C8E6C9','1B5E20',true,true),
-  B:     sty('BBDEFB','0D47A1',true,true),
-  C:     sty('FFF9C4','E65100',true,true),
-  D:     sty('FCE4EC','880E4F',true,true),
-  At:    sty('C8E6C9','1B5E20',true,true),
-  In:    sty('FFCDD2','B71C1C',true,true),
-  Pr:    sty('E8EAF6','1A237E',true,true),
-  Po:    sty('FCE4EC','880E4F',true,true),
-};
-const SCEL = {A:S.A, B:S.B, C:S.C, D:S.D};
-const SMOM = ['At','In','Pr','Po'];
-
-function c(v, s, t='s') {
-  return { v: v===null||v===undefined?'':v, t: typeof v==='number'?'n':'s', s };
-}
-
-function makeSheet(rows, colWidths) {
-  const ws = {};
-  let maxC = 0;
-  rows.forEach((row, r) => {
-    row.forEach((cell, col) => {
-      const ref = XLSX.utils.encode_cell({r, c:col});
-      ws[ref] = cell;
-      if (col > maxC) maxC = col;
-    });
-  });
-  ws['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0}, e:{r:rows.length-1, c:maxC}});
-  ws['!cols'] = colWidths.map(w=>({wch:w}));
-  // Merge primera fila (título) y segunda (subtítulo)
-  ws['!merges'] = [
-    {s:{r:0,c:0}, e:{r:0,c:maxC}},
-    {s:{r:1,c:0}, e:{r:1,c:maxC}}
-  ];
-  return ws;
-}
-
-// ══════════════════════════════════════════
-//  EXPORTAR EXCEL
-// ══════════════════════════════════════════
-<script>
-// ============================================================
-// PALETA DE COLORES BABIES (sin # - formato RGB hex puro)
-// ============================================================
-const COLORES_BABIES = {
-  A: { fgColor: { rgb: "C6EFCE" } }, // Verde - Salud Materna
-  B: { fgColor: { rgb: "BDD7EE" } }, // Azul - Cuidado durante el Parto
-  C: { fgColor: { rgb: "FFEB9C" } }, // Amarillo - Cuidado Embarazo
-  D: { fgColor: { rgb: "FFB6C1" } }, // Rosa - Cuidado Recién Nacido
-};
-
-const COLORES_HEADER = { fgColor: { rgb: "2F5496" } }; // Azul oscuro headers
-const FONT_HEADER = { bold: true, color: { rgb: "FFFFFF" }, sz: 11 };
-const FONT_BOLD = { bold: true, sz: 10 };
-const FONT_NORMAL = { sz: 10 };
-
-// Helper: crear estilo completo de celda
-function estiloXLSX({ bgColor = null, fontBold = false, fontColor = "000000",
-                       fontSize = 10, hAlign = "left", vAlign = "center",
-                       border = false, wrapText = false } = {}) {
+function estiloXLSX({ bgColor = null, fontBold = false, fontColor = '000000',
+                      fontSize = 10, hAlign = 'left', vAlign = 'center',
+                      border = false, wrapText = false } = {}) {
   const s = {
     font: { bold: fontBold, color: { rgb: fontColor }, sz: fontSize },
     alignment: { horizontal: hAlign, vertical: vAlign, wrapText },
   };
-  if (bgColor) {
-    s.fill = { patternType: "solid", fgColor: { rgb: bgColor } };
-  }
+  if (bgColor) s.fill = { patternType: 'solid', fgColor: { rgb: bgColor } };
   if (border) {
-    const b = { style: "thin", color: { rgb: "AAAAAA" } };
+    const b = { style: 'thin', color: { rgb: 'CCCCCC' } };
     s.border = { top: b, bottom: b, left: b, right: b };
   }
   return s;
 }
 
-// Helper: aplicar estilo a rango de celdas (ej: "A1:E1")
 function estilizarRango(ws, rango, estilo) {
-  const [inicio, fin] = rango.split(":");
-  const colInicio = inicio.replace(/\d/g, "");
-  const filInicio = parseInt(inicio.replace(/\D/g, ""));
-  const colFin = fin ? fin.replace(/\d/g, "") : colInicio;
-  const filFin = fin ? parseInt(fin.replace(/\D/g, "")) : filInicio;
-
-  const colToNum = (c) => c.split("").reduce((a, ch) => a * 26 + ch.charCodeAt(0) - 64, 0);
-  const numToCol = (n) => {
-    let s = "";
-    while (n > 0) { s = String.fromCharCode(((n - 1) % 26) + 65) + s; n = Math.floor((n - 1) / 26); }
-    return s;
-  };
-
+  const [inicio, fin] = rango.split(':');
+  const colInicio = inicio.replace(/\d/g, '');
+  const filInicio = parseInt(inicio.replace(/\D/g, ''));
+  const colFin = fin ? fin.replace(/\d/g, '') : colInicio;
+  const filFin = fin ? parseInt(fin.replace(/\D/g, '')) : filInicio;
+  const colToNum = s => s.split('').reduce((a, ch) => a * 26 + ch.charCodeAt(0) - 64, 0);
+  const numToCol = n => { let s = ''; while (n > 0) { s = String.fromCharCode(((n - 1) % 26) + 65) + s; n = Math.floor((n - 1) / 26); } return s; };
   for (let r = filInicio; r <= filFin; r++) {
     for (let c = colToNum(colInicio); c <= colToNum(colFin); c++) {
       const addr = numToCol(c) + r;
-      if (!ws[addr]) ws[addr] = { v: "", t: "s" };
+      if (!ws[addr]) ws[addr] = { v: '', t: 's' };
       ws[addr].s = estilo;
     }
   }
 }
 
-// ============================================================
-// FUNCIÓN PRINCIPAL - exportarExcel()
-// ============================================================
-async function exportarExcel() {
+// Colores BABIES (sin # — formato rgb puro)
+const COL = {
+  A: 'C8E6C9', B: 'BBDEFB', C: 'FFF9C4', D: 'FCE4EC',
+  HDR: '0F6E5B', TOT: 'D9D9D9'
+};
 
-  // Verificar librería
-  if (typeof XLSX === "undefined") {
-    alert("❌ Error: La librería XLSX no está cargada.\nVerifica tu conexión a internet.");
+// ══════════════════════════════════════════
+//  EXPORTAR EXCEL
+// ══════════════════════════════════════════
+function exportarExcel() {
+  if (typeof XLSX === 'undefined') {
+    alert('❌ La librería XLSX no está cargada. Verifica tu conexión.');
     return;
   }
-
-  // Verificar datos (la variable 'casos' debe existir en tu app)
-  if (!casos || casos.length === 0) {
-    alert("⚠️ No hay datos para exportar.");
+  if (!todos || todos.length === 0) {
+    alert('⚠️ No hay datos para exportar.');
     return;
   }
 
   try {
     const wb = XLSX.utils.book_new();
+    const hdrSty  = estiloXLSX({ bgColor: COL.HDR, fontBold: true, fontColor: 'FFFFFF', fontSize: 11, hAlign: 'center', border: true });
+    const totSty  = estiloXLSX({ bgColor: COL.TOT, fontBold: true, border: true, hAlign: 'center' });
 
-    // ─────────────────────────────────────────────────────────
-    // HOJA 1: Base de Datos (filas coloreadas por celda BABIES)
-    // ─────────────────────────────────────────────────────────
-    const encabezados = [
-      "ID", "Fecha Evento", "Gestión", "Establecimiento",
-      "Red / Municipio", "Distrito", "Peso (g)",
-      "Tipo de Muerte", "Momento", "Celda BABIES", "Área BABIES", "Fecha Registro"
-    ];
-
-    const filas = casos.map(c => [
-      c.id,
-      c.fecha_evento || "",
-      c.año || "",
-      c.establecimiento || "",
-      c.red_municipio || "",
-      c.distrito || "",
-      c.peso || "",
-      c.tipo_muerte || "",
-      c.momento_muerte || "",
-      c.clasificacion || "",
-      c.area_babies || "",
-      c.fecha_registro ? c.fecha_registro.split("T")[0] : ""
+    // ── HOJA 1: Base de Datos ──────────────────────────────
+    const enc = ['ID','Fecha Evento','Gestión','Establecimiento','Red / Municipio',
+                 'Distrito','Peso (g)','Tipo de Muerte','Momento','Celda BABIES','Área BABIES','Fecha Registro'];
+    const filas = todos.map(c => [
+      c.id, c.fecha_evento || '', c.año || '', c.establecimiento || '',
+      c.red_municipio || '', c.distrito || '', c.peso || '',
+      c.tipo_muerte || '', c.momento_muerte || '',
+      c.clasificacion || '', c.area_babies || '',
+      c.fecha_registro ? c.fecha_registro.split('T')[0] : ''
     ]);
-
-    const ws1 = XLSX.utils.aoa_to_sheet([encabezados, ...filas]);
-
-    // Ancho de columnas
-    ws1["!cols"] = [
-      { wch: 6 }, { wch: 13 }, { wch: 8 }, { wch: 28 },
-      { wch: 20 }, { wch: 18 }, { wch: 10 },
-      { wch: 14 }, { wch: 25 }, { wch: 12 }, { wch: 30 }, { wch: 14 }
-    ];
-
-    // Estilo de encabezado
-    const nCols = encabezados.length;
-    const colFinalLetra = String.fromCharCode(64 + nCols);
-    estilizarRango(ws1, `A1:${colFinalLetra}1`,
-      estiloXLSX({ bgColor: "2F5496", fontBold: true, fontColor: "FFFFFF",
-                   fontSize: 11, hAlign: "center", border: true })
-    );
-
-    // Estilo de filas de datos (color según celda BABIES)
-    casos.forEach((c, i) => {
-      const fila = i + 2; // fila Excel (1 = header)
-      const celda = c.clasificacion; // "A", "B", "C", "D"
-      const bgColor = celda && COLORES_BABIES[celda]
-        ? COLORES_BABIES[celda].fgColor.rgb
-        : "FFFFFF";
-
-      for (let col = 1; col <= nCols; col++) {
+    const ws1 = XLSX.utils.aoa_to_sheet([enc, ...filas]);
+    ws1['!cols'] = [6,13,8,28,20,18,10,14,25,12,30,14].map(w => ({ wch: w }));
+    estilizarRango(ws1, `A1:L1`, hdrSty);
+    todos.forEach((c, i) => {
+      const fila = i + 2;
+      const bg = COL[c.clasificacion] || 'FFFFFF';
+      for (let col = 1; col <= enc.length; col++) {
         const addr = String.fromCharCode(64 + col) + fila;
-        if (!ws1[addr]) ws1[addr] = { v: "", t: "s" };
-        ws1[addr].s = estiloXLSX({
-          bgColor, fontSize: 10, border: true,
-          hAlign: col >= 7 && col <= 10 ? "center" : "left"
-        });
+        if (!ws1[addr]) ws1[addr] = { v: '', t: 's' };
+        ws1[addr].s = estiloXLSX({ bgColor: bg, border: true, hAlign: col >= 7 && col <= 10 ? 'center' : 'left' });
       }
     });
+    XLSX.utils.book_append_sheet(wb, ws1, 'Base de Datos');
 
-    XLSX.utils.book_append_sheet(wb, ws1, "Base de Datos");
+    // ── HOJA 2: Resumen BABIES ─────────────────────────────
+    const cnt = { A: 0, B: 0, C: 0, D: 0 };
+    todos.forEach(c => { if (cnt[c.clasificacion] !== undefined) cnt[c.clasificacion]++; });
+    const tot = todos.length;
+    const pct = n => tot ? ((n / tot) * 100).toFixed(1) + '%' : '0%';
 
-    // ─────────────────────────────────────────────────────────
-    // HOJA 2: Resumen BABIES
-    // ─────────────────────────────────────────────────────────
-    const conteo = { A: 0, B: 0, C: 0, D: 0 };
-    casos.forEach(c => { if (conteo[c.clasificacion] !== undefined) conteo[c.clasificacion]++; });
-    const total = casos.length;
-
-    const datosResumen = [
-      ["Celda", "Área BABIES", "Casos", "Porcentaje"],
-      ["A", "Salud Materna (≥2500g + Fetal)", conteo.A, total ? ((conteo.A / total) * 100).toFixed(1) + "%" : "0%"],
-      ["B", "Cuidado durante el Parto (≥2500g + Neonatal)", conteo.B, total ? ((conteo.B / total) * 100).toFixed(1) + "%" : "0%"],
-      ["C", "Cuidado durante el Embarazo (<2500g + Fetal)", conteo.C, total ? ((conteo.C / total) * 100).toFixed(1) + "%" : "0%"],
-      ["D", "Cuidado del Recién Nacido (<2500g + Neonatal)", conteo.D, total ? ((conteo.D / total) * 100).toFixed(1) + "%" : "0%"],
-      ["TOTAL", "", total, "100%"],
-    ];
-
-    const ws2 = XLSX.utils.aoa_to_sheet(datosResumen);
-    ws2["!cols"] = [{ wch: 8 }, { wch: 50 }, { wch: 10 }, { wch: 12 }];
-
-    // Header
-    estilizarRango(ws2, "A1:D1",
-      estiloXLSX({ bgColor: "2F5496", fontBold: true, fontColor: "FFFFFF",
-                   fontSize: 11, hAlign: "center", border: true })
-    );
-
-    // Fila A - Verde
-    estilizarRango(ws2, "A2:D2",
-      estiloXLSX({ bgColor: "C6EFCE", fontBold: true, border: true })
-    );
-    // Fila B - Azul
-    estilizarRango(ws2, "A3:D3",
-      estiloXLSX({ bgColor: "BDD7EE", fontBold: true, border: true })
-    );
-    // Fila C - Amarillo
-    estilizarRango(ws2, "A4:D4",
-      estiloXLSX({ bgColor: "FFEB9C", fontBold: true, border: true })
-    );
-    // Fila D - Rosa
-    estilizarRango(ws2, "A5:D5",
-      estiloXLSX({ bgColor: "FFB6C1", fontBold: true, border: true })
-    );
-    // Total - Gris
-    estilizarRango(ws2, "A6:D6",
-      estiloXLSX({ bgColor: "D9D9D9", fontBold: true, border: true })
-    );
-
-    XLSX.utils.book_append_sheet(wb, ws2, "Resumen BABIES");
-
-    // ─────────────────────────────────────────────────────────
-    // HOJA 3: Matriz BABIES (Peso × Tipo de Muerte)
-    // ─────────────────────────────────────────────────────────
-    const matrizBabies = [
-      ["", "Muerte Fetal", "Muerte Neonatal", "TOTAL"],
-      ["≥ 2500 g", 0, 0, 0],
-      ["< 2500 g", 0, 0, 0],
-      ["TOTAL", 0, 0, 0],
-    ];
-
-    casos.forEach(c => {
-      const esPesado = parseInt(c.peso) >= 2500;
-      const esFetal = c.tipo_muerte === "Fetal";
-      const fil = esPesado ? 1 : 2;
-      const col = esFetal ? 1 : 2;
-      matrizBabies[fil][col]++;
-      matrizBabies[fil][3]++;
-      matrizBabies[3][col]++;
-      matrizBabies[3][3]++;
+    const ws2 = XLSX.utils.aoa_to_sheet([
+      ['Celda', 'Área BABIES', 'Casos', 'Porcentaje'],
+      ['A', 'Salud Materna (≥2500g + Fetal)',              cnt.A, pct(cnt.A)],
+      ['B', 'Cuidado durante el Parto (≥2500g + Neonatal)',cnt.B, pct(cnt.B)],
+      ['C', 'Cuidado durante el Embarazo (<2500g + Fetal)',cnt.C, pct(cnt.C)],
+      ['D', 'Cuidado del Recién Nacido (<2500g + Neonatal)',cnt.D, pct(cnt.D)],
+      ['TOTAL', '', tot, '100%'],
+    ]);
+    ws2['!cols'] = [{ wch: 8 }, { wch: 50 }, { wch: 10 }, { wch: 12 }];
+    estilizarRango(ws2, 'A1:D1', hdrSty);
+    [['A', 2], ['B', 3], ['C', 4], ['D', 5]].forEach(([cel, row]) => {
+      estilizarRango(ws2, `A${row}:D${row}`, estiloXLSX({ bgColor: COL[cel], fontBold: true, border: true }));
     });
+    estilizarRango(ws2, 'A6:D6', totSty);
+    XLSX.utils.book_append_sheet(wb, ws2, 'Resumen BABIES');
 
-    const ws3 = XLSX.utils.aoa_to_sheet(matrizBabies);
-    ws3["!cols"] = [{ wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 10 }];
-
-    // Header row
-    estilizarRango(ws3, "A1:D1",
-      estiloXLSX({ bgColor: "2F5496", fontBold: true, fontColor: "FFFFFF",
-                   fontSize: 11, hAlign: "center", border: true })
-    );
-    // Celdas BABIES con colores (A=A2:B2, B=A2:C2...)
-    // A2B2 = ≥2500+Fetal = Celda A → Verde
-    if (ws3["B2"]) ws3["B2"].s = estiloXLSX({ bgColor: "C6EFCE", border: true, hAlign: "center" });
-    // A2C2 = ≥2500+Neonatal = Celda B → Azul
-    if (ws3["C2"]) ws3["C2"].s = estiloXLSX({ bgColor: "BDD7EE", border: true, hAlign: "center" });
-    // A3B3 = <2500+Fetal = Celda C → Amarillo
-    if (ws3["B3"]) ws3["B3"].s = estiloXLSX({ bgColor: "FFEB9C", border: true, hAlign: "center" });
-    // A3C3 = <2500+Neonatal = Celda D → Rosa
-    if (ws3["C3"]) ws3["C3"].s = estiloXLSX({ bgColor: "FFB6C1", border: true, hAlign: "center" });
-
-    // Encabezados de fila + totales
-    ["A2", "A3", "D2", "D3"].forEach(addr => {
-      if (!ws3[addr]) ws3[addr] = { v: "", t: "s" };
-      ws3[addr].s = estiloXLSX({ bgColor: "D9D9D9", fontBold: true, border: true, hAlign: "center" });
-    });
-    estilizarRango(ws3, "A4:D4",
-      estiloXLSX({ bgColor: "D9D9D9", fontBold: true, border: true, hAlign: "center" })
-    );
-
-    XLSX.utils.book_append_sheet(wb, ws3, "Matriz BABIES");
-
-    // ─────────────────────────────────────────────────────────
-    // HOJA 4: Matriz Momentos (Peso × Momento de Muerte)
-    // ─────────────────────────────────────────────────────────
-    const momentos = ["Anteparto", "Intraparto", "Prealta", "Postalta"];
-    const matrizMom = [
-      ["", ...momentos, "TOTAL"],
-      ["≥ 2500 g", 0, 0, 0, 0, 0],
-      ["< 2500 g", 0, 0, 0, 0, 0],
-      ["TOTAL", 0, 0, 0, 0, 0],
+    // ── HOJA 3: Matriz BABIES ──────────────────────────────
+    const mx = [
+      ['', 'Muerte Fetal', 'Muerte Neonatal', 'TOTAL'],
+      ['≥ 2500 g', 0, 0, 0],
+      ['< 2500 g', 0, 0, 0],
+      ['TOTAL',    0, 0, 0],
     ];
-
-    casos.forEach(c => {
-      const esPesado = parseInt(c.peso) >= 2500;
-      const idxMom = momentos.findIndex(m =>
-        (c.momento_muerte || "").toLowerCase().startsWith(m.toLowerCase())
-      );
-      if (idxMom === -1) return;
-      const fil = esPesado ? 1 : 2;
-      const col = idxMom + 1;
-      matrizMom[fil][col]++;
-      matrizMom[fil][5]++;
-      matrizMom[3][col]++;
-      matrizMom[3][5]++;
+    todos.forEach(c => {
+      const r = parseInt(c.peso) >= 2500 ? 1 : 2;
+      const col = c.tipo_muerte === 'Fetal' ? 1 : 2;
+      mx[r][col]++; mx[r][3]++; mx[3][col]++; mx[3][3]++;
     });
+    const ws3 = XLSX.utils.aoa_to_sheet(mx);
+    ws3['!cols'] = [{ wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 10 }];
+    estilizarRango(ws3, 'A1:D1', hdrSty);
+    // colores BABIES en celdas internas
+    if (ws3['B2']) ws3['B2'].s = estiloXLSX({ bgColor: COL.A, border: true, hAlign: 'center' });
+    if (ws3['C2']) ws3['C2'].s = estiloXLSX({ bgColor: COL.B, border: true, hAlign: 'center' });
+    if (ws3['B3']) ws3['B3'].s = estiloXLSX({ bgColor: COL.C, border: true, hAlign: 'center' });
+    if (ws3['C3']) ws3['C3'].s = estiloXLSX({ bgColor: COL.D, border: true, hAlign: 'center' });
+    ['A2','A3','D2','D3'].forEach(a => { if (!ws3[a]) ws3[a] = { v: '', t: 's' }; ws3[a].s = totSty; });
+    estilizarRango(ws3, 'A4:D4', totSty);
+    XLSX.utils.book_append_sheet(wb, ws3, 'Matriz BABIES');
 
-    const ws4 = XLSX.utils.aoa_to_sheet(matrizMom);
-    ws4["!cols"] = [{ wch: 14 }, { wch: 13 }, { wch: 13 }, { wch: 13 }, { wch: 13 }, { wch: 10 }];
-
-    estilizarRango(ws4, "A1:F1",
-      estiloXLSX({ bgColor: "2F5496", fontBold: true, fontColor: "FFFFFF",
-                   fontSize: 11, hAlign: "center", border: true })
-    );
-
-    // Filas ≥2500 (azul claro) y <2500 (amarillo claro)
-    estilizarRango(ws4, "A2:A3",
-      estiloXLSX({ bgColor: "D9D9D9", fontBold: true, border: true })
-    );
-    estilizarRango(ws4, "B2:E2",
-      estiloXLSX({ bgColor: "E2EFDA", border: true, hAlign: "center" }) // ≥2500 verde muy claro
-    );
-    estilizarRango(ws4, "B3:E3",
-      estiloXLSX({ bgColor: "FFF2CC", border: true, hAlign: "center" }) // <2500 amarillo muy claro
-    );
-    ["F2", "F3"].forEach(addr => {
-      if (!ws4[addr]) ws4[addr] = { v: "", t: "s" };
-      ws4[addr].s = estiloXLSX({ bgColor: "D9D9D9", fontBold: true, border: true, hAlign: "center" });
+    // ── HOJA 4: Matriz Momentos ────────────────────────────
+    const moms = ['Anteparto', 'Intraparto', 'Prealta', 'Postalta'];
+    const mm = [
+      ['', ...moms, 'TOTAL'],
+      ['≥ 2500 g', 0, 0, 0, 0, 0],
+      ['< 2500 g', 0, 0, 0, 0, 0],
+      ['TOTAL',    0, 0, 0, 0, 0],
+    ];
+    todos.forEach(c => {
+      const r   = parseInt(c.peso) >= 2500 ? 1 : 2;
+      const idx = moms.findIndex(m => (c.momento_muerte || '').toLowerCase().startsWith(m.toLowerCase()));
+      if (idx === -1) return;
+      mm[r][idx + 1]++; mm[r][5]++; mm[3][idx + 1]++; mm[3][5]++;
     });
-    estilizarRango(ws4, "A4:F4",
-      estiloXLSX({ bgColor: "D9D9D9", fontBold: true, border: true, hAlign: "center" })
-    );
+    const ws4 = XLSX.utils.aoa_to_sheet(mm);
+    ws4['!cols'] = [14, 13, 13, 13, 13, 10].map(w => ({ wch: w }));
+    estilizarRango(ws4, 'A1:F1', hdrSty);
+    estilizarRango(ws4, 'A2:A3', totSty);
+    estilizarRango(ws4, 'B2:E2', estiloXLSX({ bgColor: 'E2EFDA', border: true, hAlign: 'center' }));
+    estilizarRango(ws4, 'B3:E3', estiloXLSX({ bgColor: 'FFF2CC', border: true, hAlign: 'center' }));
+    ['F2','F3'].forEach(a => { if (!ws4[a]) ws4[a] = { v: '', t: 's' }; ws4[a].s = totSty; });
+    estilizarRango(ws4, 'A4:F4', totSty);
+    XLSX.utils.book_append_sheet(wb, ws4, 'Matriz Momentos');
 
-    XLSX.utils.book_append_sheet(wb, ws4, "Matriz Momentos");
-
-    // ─────────────────────────────────────────────────────────
-    // HOJA 5: Indicadores por Área
-    // ─────────────────────────────────────────────────────────
-    const indicadoresData = [
-      ["Celda", "Área BABIES", "Descripción", "Casos", "%"],
-      [
-        "A", "Salud Materna",
-        "Muertes fetales ≥2500g. Refleja calidad de atención materna prenatal.",
-        conteo.A, total ? ((conteo.A / total) * 100).toFixed(1) + "%" : "0%"
-      ],
-      [
-        "B", "Cuidado durante el Parto",
-        "Muertes neonatales ≥2500g. Refleja calidad de atención del parto.",
-        conteo.B, total ? ((conteo.B / total) * 100).toFixed(1) + "%" : "0%"
-      ],
-      [
-        "C", "Cuidado durante el Embarazo",
-        "Muertes fetales <2500g. Refleja calidad de atención de embarazo de alto riesgo.",
-        conteo.C, total ? ((conteo.C / total) * 100).toFixed(1) + "%" : "0%"
-      ],
-      [
-        "D", "Cuidado del Recién Nacido",
-        "Muertes neonatales <2500g. Refleja calidad de atención neonatal.",
-        conteo.D, total ? ((conteo.D / total) * 100).toFixed(1) + "%" : "0%"
-      ],
-      ["", "TOTAL", "", total, "100%"],
-    ];
-
-    const ws5 = XLSX.utils.aoa_to_sheet(indicadoresData);
-    ws5["!cols"] = [
-      { wch: 8 }, { wch: 28 }, { wch: 55 }, { wch: 8 }, { wch: 8 }
-    ];
-
-    // Header
-    estilizarRango(ws5, "A1:E1",
-      estiloXLSX({ bgColor: "2F5496", fontBold: true, fontColor: "FFFFFF",
-                   fontSize: 11, hAlign: "center", border: true })
-    );
-
-    const coloresHoja5 = [
-      { rango: "A2:E2", bg: "C6EFCE" }, // A - Verde
-      { rango: "A3:E3", bg: "BDD7EE" }, // B - Azul
-      { rango: "A4:E4", bg: "FFEB9C" }, // C - Amarillo
-      { rango: "A5:E5", bg: "FFB6C1" }, // D - Rosa
-      { rango: "A6:E6", bg: "D9D9D9" }, // Total - Gris
-    ];
-
-    coloresHoja5.forEach(({ rango, bg }) => {
-      estilizarRango(ws5, rango,
-        estiloXLSX({ bgColor: bg, fontBold: false, border: true, wrapText: true })
-      );
-    });
-
-    // Celdas A y % centradas
-    [2, 3, 4, 5, 6].forEach(f => {
-      ["A", "D", "E"].forEach(col => {
-        const addr = col + f;
-        if (!ws5[addr]) ws5[addr] = { v: "", t: "s" };
-        const bgMap = { 2: "C6EFCE", 3: "BDD7EE", 4: "FFEB9C", 5: "FFB6C1", 6: "D9D9D9" };
-        ws5[addr].s = estiloXLSX({
-          bgColor: bgMap[f], fontBold: col === "A",
-          border: true, hAlign: "center"
-        });
+    // ── HOJA 5: Indicadores ────────────────────────────────
+    const ws5 = XLSX.utils.aoa_to_sheet([
+      ['Celda', 'Área BABIES', 'Descripción', 'Casos', '%'],
+      ['A', 'Salud Materna',            'Muertes fetales ≥2500g. Refleja calidad de atención materna prenatal.',       cnt.A, pct(cnt.A)],
+      ['B', 'Cuidado durante el Parto', 'Muertes neonatales ≥2500g. Refleja calidad de atención del parto.',           cnt.B, pct(cnt.B)],
+      ['C', 'Cuidado del Embarazo',     'Muertes fetales <2500g. Refleja calidad de atención de embarazo alto riesgo.', cnt.C, pct(cnt.C)],
+      ['D', 'Cuidado del RN',           'Muertes neonatales <2500g. Refleja calidad de atención neonatal.',             cnt.D, pct(cnt.D)],
+      ['',  'TOTAL', '', tot, '100%'],
+    ]);
+    ws5['!cols'] = [{ wch: 8 }, { wch: 28 }, { wch: 55 }, { wch: 8 }, { wch: 8 }];
+    ws5['!rows'] = [{ hpt: 18 }, { hpt: 40 }, { hpt: 40 }, { hpt: 40 }, { hpt: 40 }, { hpt: 18 }];
+    estilizarRango(ws5, 'A1:E1', hdrSty);
+    [['A', 2], ['B', 3], ['C', 4], ['D', 5]].forEach(([cel, row]) => {
+      estilizarRango(ws5, `A${row}:E${row}`, estiloXLSX({ bgColor: COL[cel], border: true, wrapText: true }));
+      ['A', 'D', 'E'].forEach(col => {
+        const addr = col + row;
+        if (!ws5[addr]) ws5[addr] = { v: '', t: 's' };
+        ws5[addr].s = estiloXLSX({ bgColor: COL[cel], fontBold: col === 'A', border: true, hAlign: 'center', wrapText: true });
       });
     });
+    estilizarRango(ws5, 'A6:E6', totSty);
+    XLSX.utils.book_append_sheet(wb, ws5, 'Indicadores');
 
-    // Altura de filas para descriptores largos
-    ws5["!rows"] = [{ hpt: 20 }, { hpt: 40 }, { hpt: 40 }, { hpt: 40 }, { hpt: 40 }, { hpt: 20 }];
-
-    XLSX.utils.book_append_sheet(wb, ws5, "Indicadores");
-
-    // ─────────────────────────────────────────────────────────
-    // GUARDAR ARCHIVO
-    // ─────────────────────────────────────────────────────────
-    const fecha = new Date().toISOString().split("T")[0];
+    // ── Guardar ────────────────────────────────────────────
+    const fecha = new Date().toISOString().split('T')[0];
     XLSX.writeFile(wb, `BABIES_${fecha}.xlsx`);
+    toast('✅ Excel generado correctamente');
 
   } catch (err) {
-    console.error("Error al exportar Excel:", err);
-    alert("❌ Error al generar Excel:\n" + err.message);
+    console.error('Error exportarExcel:', err);
+    alert('❌ Error al generar Excel:\n' + err.message);
   }
 }
-// ============================================================
-// FIN DE LA FUNCIÓN exportarExcel()
-// ============================================================
-</script>
-  
+
 // ══════════════════════════════════════════
 //  ANÁLISIS
 // ══════════════════════════════════════════
 function tasas(lista, n) {
-  const r={A:0,B:0,C:0,D:0};
-  if (!n||!lista.length) return r;
-  ['A','B','C','D'].forEach(c=>r[c]=(lista.filter(x=>x.clasificacion===c).length/n)*1000);
+  const r = { A: 0, B: 0, C: 0, D: 0 };
+  if (!n || !lista.length) return r;
+  ['A','B','C','D'].forEach(c => r[c] = (lista.filter(x => x.clasificacion === c).length / n) * 1000);
   return r;
 }
 
 function calcAnalisis() {
-  const d1=document.getElementById('an-d1').value;
-  const n1=parseFloat(document.getElementById('an-n1').value)||0;
-  const d2=document.getElementById('an-d2').value;
-  const n2=parseFloat(document.getElementById('an-n2').value)||0;
-  const año=document.getElementById('an-año').value;
-  if (!d1||!d2||d1===d2) { document.getElementById('res-analisis').style.display='none'; return; }
-  let f1=todos.filter(c=>c.distrito===d1), f2=todos.filter(c=>c.distrito===d2);
-  if (año) { f1=f1.filter(c=>String(c.año)===año); f2=f2.filter(c=>String(c.año)===año); }
-  document.getElementById('res-analisis').style.display='block';
-  const t1=tasas(f1,n1), t2=tasas(f2,n2);
-  const mat=document.getElementById('mat-analisis');
-  mat.innerHTML='';
-  ['A','B','C','D'].forEach(c=>{
-    const b=t1[c]-t2[c];
-    mat.innerHTML+=`<div class="matrix-cell mc-${c}"><div class="mc-letter">Celda ${c}</div><div class="mc-name">${AREAS[c]}</div><div class="mc-rate">${t1[c].toFixed(2)} ‰</div><div class="mc-brecha">${b>0.05?'🔴':b<-0.05?'🟢':'⚪'} ${b>=0?'+':''}${b.toFixed(2)}</div></div>`;
+  const d1 = document.getElementById('an-d1').value;
+  const n1 = parseFloat(document.getElementById('an-n1').value) || 0;
+  const d2 = document.getElementById('an-d2').value;
+  const n2 = parseFloat(document.getElementById('an-n2').value) || 0;
+  const año = document.getElementById('an-año').value;
+  if (!d1 || !d2 || d1 === d2) { document.getElementById('res-analisis').style.display = 'none'; return; }
+  let f1 = todos.filter(c => c.distrito === d1), f2 = todos.filter(c => c.distrito === d2);
+  if (año) { f1 = f1.filter(c => String(c.año) === año); f2 = f2.filter(c => String(c.año) === año); }
+  document.getElementById('res-analisis').style.display = 'block';
+  const t1 = tasas(f1, n1), t2 = tasas(f2, n2);
+  const mat = document.getElementById('mat-analisis');
+  mat.innerHTML = '';
+  ['A','B','C','D'].forEach(c => {
+    const b = t1[c] - t2[c];
+    mat.innerHTML += `<div class="matrix-cell mc-${c}"><div class="mc-letter">Celda ${c}</div><div class="mc-name">${AREAS[c]}</div><div class="mc-rate">${t1[c].toFixed(2)} ‰</div><div class="mc-brecha">${b > 0.05 ? '🔴' : b < -0.05 ? '🟢' : '⚪'} ${b >= 0 ? '+' : ''}${b.toFixed(2)}</div></div>`;
   });
-  const ctx=document.getElementById('chart-brecha').getContext('2d');
+  const ctx = document.getElementById('chart-brecha').getContext('2d');
   if (cBrecha) cBrecha.destroy();
-  cBrecha=new Chart(ctx,{type:'bar',data:{labels:['A','B','C','D'],datasets:[{label:d1,data:['A','B','C','D'].map(c=>+t1[c].toFixed(3)),backgroundColor:'#0f6e5b'},{label:`${d2} (estándar)`,data:['A','B','C','D'].map(c=>+t2[c].toFixed(3)),backgroundColor:'#f4a726'}]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{title:{display:true,text:'Tasa × 1000 NV'}}}}});
+  cBrecha = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['A','B','C','D'],
+      datasets: [
+        { label: d1, data: ['A','B','C','D'].map(c => +t1[c].toFixed(3)), backgroundColor: '#0f6e5b' },
+        { label: `${d2} (estándar)`, data: ['A','B','C','D'].map(c => +t2[c].toFixed(3)), backgroundColor: '#f4a726' }
+      ]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { title: { display: true, text: 'Tasa × 1000 NV' } } } }
+  });
 }
 
 // ══════════════════════════════════════════
 //  INDICADORES
 // ══════════════════════════════════════════
 function renderInd() {
-  const año=document.getElementById('ind-año').value;
-  const dist=document.getElementById('ind-dist').value;
-  const datos=todos.filter(c=>{
-    if (año && String(c.año)!==año) return false;
-    if (dist && c.distrito!==dist) return false;
+  const año  = document.getElementById('ind-año').value;
+  const dist = document.getElementById('ind-dist').value;
+  const datos = todos.filter(c => {
+    if (año  && String(c.año) !== año) return false;
+    if (dist && c.distrito !== dist)   return false;
     return true;
   });
-  const tot=datos.length||1;
-  let h=`<table class="ind-table"><thead><tr><th>Celda</th><th>Área BABIES</th><th>Casos</th><th>%</th></tr></thead><tbody>`;
-  ['A','B','C','D'].forEach(c=>{
-    const n=datos.filter(x=>x.clasificacion===c).length;
-    h+=`<tr><td><span class="cel cel-${c}">${c}</span></td><td>${AREAS[c]}</td><td>${n}</td><td>${(n/tot*100).toFixed(1)}%</td></tr>`;
+  const tot = datos.length || 1;
+  let h = `<table class="ind-table"><thead><tr><th>Celda</th><th>Área BABIES</th><th>Casos</th><th>%</th></tr></thead><tbody>`;
+  ['A','B','C','D'].forEach(c => {
+    const n = datos.filter(x => x.clasificacion === c).length;
+    h += `<tr><td><span class="cel cel-${c}">${c}</span></td><td>${AREAS[c]}</td><td>${n}</td><td>${(n / tot * 100).toFixed(1)}%</td></tr>`;
   });
-  h+=`<tr class="tot"><td colspan="2">TOTAL</td><td>${datos.length}</td><td>100%</td></tr></tbody></table>`;
-  document.getElementById('div-ind').innerHTML=h;
+  h += `<tr class="tot"><td colspan="2">TOTAL</td><td>${datos.length}</td><td>100%</td></tr></tbody></table>`;
+  document.getElementById('div-ind').innerHTML = h;
 }
 
 // ══════════════════════════════════════════
 //  HISTÓRICO
 // ══════════════════════════════════════════
 function renderHist() {
-  const dist=document.getElementById('hist-dist').value;
-  const datos=dist?todos.filter(c=>c.distrito===dist):todos;
-  const porAño={};
-  datos.forEach(c=>{const a=c.año||'?';porAño[a]=(porAño[a]||0)+1;});
-  const años=Object.keys(porAño).sort();
-  const ctx1=document.getElementById('chart-hist').getContext('2d');
+  const dist  = document.getElementById('hist-dist').value;
+  const datos = dist ? todos.filter(c => c.distrito === dist) : todos;
+
+  const porAño = {};
+  datos.forEach(c => { const a = c.año || '?'; porAño[a] = (porAño[a] || 0) + 1; });
+  const años = Object.keys(porAño).sort();
+
+  const ctx1 = document.getElementById('chart-hist').getContext('2d');
   if (cHist) cHist.destroy();
-  cHist=new Chart(ctx1,{type:'line',data:{labels:años,datasets:[{label:'Casos',data:años.map(a=>porAño[a]),borderColor:'#0f6e5b',backgroundColor:'rgba(15,110,91,.15)',borderWidth:2.5,fill:true,tension:.35,pointRadius:5,pointBackgroundColor:'#0f6e5b'}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});
+  cHist = new Chart(ctx1, {
+    type: 'line',
+    data: {
+      labels: años,
+      datasets: [{ label: 'Casos', data: años.map(a => porAño[a]), borderColor: '#0f6e5b', backgroundColor: 'rgba(15,110,91,.15)', borderWidth: 2.5, fill: true, tension: .35, pointRadius: 5, pointBackgroundColor: '#0f6e5b' }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+  });
 
   // Por mes
-  const añoAct=new Date().getFullYear();
-  const MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  const pm=new Array(12).fill(0);
-  datos.filter(c=>c.año===añoAct).forEach(c=>{const m=new Date(c.fecha_registro).getMonth();if(!isNaN(m))pm[m]++;});
-  const mx=Math.max(...pm,1);
-  const d=document.getElementById('div-mensual');
-  d.innerHTML='';
-  MES.forEach((mes,i)=>{ d.innerHTML+=`<div class="hist-row"><div class="hist-label">${mes} ${añoAct}</div><div class="hist-bar" style="width:${pm[i]/mx*100}%;${pm[i]?'min-width:6px':''}"></div><div class="hist-count">${pm[i]}</div></div>`; });
+  const añoAct = new Date().getFullYear();
+  const MES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const pm = new Array(12).fill(0);
+  datos.filter(c => c.año === añoAct).forEach(c => { const m = new Date(c.fecha_registro).getMonth(); if (!isNaN(m)) pm[m]++; });
+  const mx = Math.max(...pm, 1);
+  const d = document.getElementById('div-mensual');
+  d.innerHTML = '';
+  MES.forEach((mes, i) => {
+    d.innerHTML += `<div class="hist-row"><div class="hist-label">${mes} ${añoAct}</div><div class="hist-bar" style="width:${pm[i] / mx * 100}%;${pm[i] ? 'min-width:6px' : ''}"></div><div class="hist-count">${pm[i]}</div></div>`;
+  });
 
   // Por momento
-  const MOM=['Anteparto','Intraparto','Prealta','Postalta'];
-  const ctx2=document.getElementById('chart-mom').getContext('2d');
+  const MOM = ['Anteparto','Intraparto','Prealta','Postalta'];
+  const ctx2 = document.getElementById('chart-mom').getContext('2d');
   if (cMom) cMom.destroy();
-  cMom=new Chart(ctx2,{type:'doughnut',data:{labels:MOM,datasets:[{data:MOM.map(m=>datos.filter(c=>c.momento_muerte===m).length),backgroundColor:['#f4a726','#e05252','#1a9076','#880e4f']}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}});
+  cMom = new Chart(ctx2, {
+    type: 'doughnut',
+    data: {
+      labels: MOM,
+      datasets: [{ data: MOM.map(m => datos.filter(c => c.momento_muerte === m).length), backgroundColor: ['#f4a726','#e05252','#1a9076','#880e4f'] }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+  });
 }
 
 // ══════════════════════════════════════════
 //  TABS + TOAST
 // ══════════════════════════════════════════
 function showTab(tab) {
-  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
-  document.getElementById('tab-'+tab).classList.add('active');
-  const idx=['registrar','datos','analisis','historico'].indexOf(tab);
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  const idx = ['registrar','datos','analisis','historico'].indexOf(tab);
   document.querySelectorAll('nav button')[idx].classList.add('active');
 }
+
 let tT;
-function toast(msg,err=false){
-  const el=document.getElementById('toast');
-  el.textContent=msg; el.className=err?'error show':'show';
-  clearTimeout(tT); tT=setTimeout(()=>el.classList.remove('show','error'),2800);
+function toast(msg, err = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = err ? 'error show' : 'show';
+  clearTimeout(tT); tT = setTimeout(() => el.classList.remove('show', 'error'), 2800);
 }
 </script>
 </body>
