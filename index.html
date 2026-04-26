@@ -487,64 +487,382 @@ function makeSheet(rows, colWidths) {
 // ══════════════════════════════════════════
 //  EXPORTAR EXCEL
 // ══════════════════════════════════════════
-async function exportarExcel() {
-  try {
-    if (typeof ExcelJS === 'undefined') {
-      alert('ExcelJS no está cargado');
-      return;
+<script>
+// ============================================================
+// PALETA DE COLORES BABIES (sin # - formato RGB hex puro)
+// ============================================================
+const COLORES_BABIES = {
+  A: { fgColor: { rgb: "C6EFCE" } }, // Verde - Salud Materna
+  B: { fgColor: { rgb: "BDD7EE" } }, // Azul - Cuidado durante el Parto
+  C: { fgColor: { rgb: "FFEB9C" } }, // Amarillo - Cuidado Embarazo
+  D: { fgColor: { rgb: "FFB6C1" } }, // Rosa - Cuidado Recién Nacido
+};
+
+const COLORES_HEADER = { fgColor: { rgb: "2F5496" } }; // Azul oscuro headers
+const FONT_HEADER = { bold: true, color: { rgb: "FFFFFF" }, sz: 11 };
+const FONT_BOLD = { bold: true, sz: 10 };
+const FONT_NORMAL = { sz: 10 };
+
+// Helper: crear estilo completo de celda
+function estiloXLSX({ bgColor = null, fontBold = false, fontColor = "000000",
+                       fontSize = 10, hAlign = "left", vAlign = "center",
+                       border = false, wrapText = false } = {}) {
+  const s = {
+    font: { bold: fontBold, color: { rgb: fontColor }, sz: fontSize },
+    alignment: { horizontal: hAlign, vertical: vAlign, wrapText },
+  };
+  if (bgColor) {
+    s.fill = { patternType: "solid", fgColor: { rgb: bgColor } };
+  }
+  if (border) {
+    const b = { style: "thin", color: { rgb: "AAAAAA" } };
+    s.border = { top: b, bottom: b, left: b, right: b };
+  }
+  return s;
+}
+
+// Helper: aplicar estilo a rango de celdas (ej: "A1:E1")
+function estilizarRango(ws, rango, estilo) {
+  const [inicio, fin] = rango.split(":");
+  const colInicio = inicio.replace(/\d/g, "");
+  const filInicio = parseInt(inicio.replace(/\D/g, ""));
+  const colFin = fin ? fin.replace(/\d/g, "") : colInicio;
+  const filFin = fin ? parseInt(fin.replace(/\D/g, "")) : filInicio;
+
+  const colToNum = (c) => c.split("").reduce((a, ch) => a * 26 + ch.charCodeAt(0) - 64, 0);
+  const numToCol = (n) => {
+    let s = "";
+    while (n > 0) { s = String.fromCharCode(((n - 1) % 26) + 65) + s; n = Math.floor((n - 1) / 26); }
+    return s;
+  };
+
+  for (let r = filInicio; r <= filFin; r++) {
+    for (let c = colToNum(colInicio); c <= colToNum(colFin); c++) {
+      const addr = numToCol(c) + r;
+      if (!ws[addr]) ws[addr] = { v: "", t: "s" };
+      ws[addr].s = estilo;
     }
-
-    const workbook = new ExcelJS.Workbook();
-
-    // ===== HOJA 1 =====
-    const ws1 = workbook.addWorksheet('Base de Datos');
-    ws1.addRow(['ID','Peso','Tipo','Celda']);
-    todos.forEach(x => {
-      ws1.addRow([x.id, x.peso, x.tipo_muerte, x.clasificacion]);
-    });
-
-    // ===== HOJA 2 =====
-    const ws2 = workbook.addWorksheet('Resumen');
-    ws2.addRow(['Celda','Casos']);
-    ['A','B','C','D'].forEach(c => {
-      const n = todos.filter(x=>x.clasificacion===c).length;
-      ws2.addRow([c,n]);
-    });
-
-    // ===== HOJA 3 =====
-    workbook.addWorksheet('Matriz');
-
-    // ===== HOJA 4 =====
-    workbook.addWorksheet('Momentos');
-
-    // ===== HOJA 5 =====
-    workbook.addWorksheet('Indicadores');
-
-    // ===== DESCARGA =====
-    const buffer = await workbook.xlsx.writeBuffer();
-
-    const blob = new Blob([buffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    });
-
-    const url = window.URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'BABIES.xlsx';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-
-    window.URL.revokeObjectURL(url);
-
-    toast('📥 Excel descargado');
-
-  } catch (err) {
-    console.error(err);
-    alert('Error al exportar: ' + err.message);
   }
 }
+
+// ============================================================
+// FUNCIÓN PRINCIPAL - exportarExcel()
+// ============================================================
+async function exportarExcel() {
+
+  // Verificar librería
+  if (typeof XLSX === "undefined") {
+    alert("❌ Error: La librería XLSX no está cargada.\nVerifica tu conexión a internet.");
+    return;
+  }
+
+  // Verificar datos (la variable 'casos' debe existir en tu app)
+  if (!casos || casos.length === 0) {
+    alert("⚠️ No hay datos para exportar.");
+    return;
+  }
+
+  try {
+    const wb = XLSX.utils.book_new();
+
+    // ─────────────────────────────────────────────────────────
+    // HOJA 1: Base de Datos (filas coloreadas por celda BABIES)
+    // ─────────────────────────────────────────────────────────
+    const encabezados = [
+      "ID", "Fecha Evento", "Gestión", "Establecimiento",
+      "Red / Municipio", "Distrito", "Peso (g)",
+      "Tipo de Muerte", "Momento", "Celda BABIES", "Área BABIES", "Fecha Registro"
+    ];
+
+    const filas = casos.map(c => [
+      c.id,
+      c.fecha_evento || "",
+      c.año || "",
+      c.establecimiento || "",
+      c.red_municipio || "",
+      c.distrito || "",
+      c.peso || "",
+      c.tipo_muerte || "",
+      c.momento_muerte || "",
+      c.clasificacion || "",
+      c.area_babies || "",
+      c.fecha_registro ? c.fecha_registro.split("T")[0] : ""
+    ]);
+
+    const ws1 = XLSX.utils.aoa_to_sheet([encabezados, ...filas]);
+
+    // Ancho de columnas
+    ws1["!cols"] = [
+      { wch: 6 }, { wch: 13 }, { wch: 8 }, { wch: 28 },
+      { wch: 20 }, { wch: 18 }, { wch: 10 },
+      { wch: 14 }, { wch: 25 }, { wch: 12 }, { wch: 30 }, { wch: 14 }
+    ];
+
+    // Estilo de encabezado
+    const nCols = encabezados.length;
+    const colFinalLetra = String.fromCharCode(64 + nCols);
+    estilizarRango(ws1, `A1:${colFinalLetra}1`,
+      estiloXLSX({ bgColor: "2F5496", fontBold: true, fontColor: "FFFFFF",
+                   fontSize: 11, hAlign: "center", border: true })
+    );
+
+    // Estilo de filas de datos (color según celda BABIES)
+    casos.forEach((c, i) => {
+      const fila = i + 2; // fila Excel (1 = header)
+      const celda = c.clasificacion; // "A", "B", "C", "D"
+      const bgColor = celda && COLORES_BABIES[celda]
+        ? COLORES_BABIES[celda].fgColor.rgb
+        : "FFFFFF";
+
+      for (let col = 1; col <= nCols; col++) {
+        const addr = String.fromCharCode(64 + col) + fila;
+        if (!ws1[addr]) ws1[addr] = { v: "", t: "s" };
+        ws1[addr].s = estiloXLSX({
+          bgColor, fontSize: 10, border: true,
+          hAlign: col >= 7 && col <= 10 ? "center" : "left"
+        });
+      }
+    });
+
+    XLSX.utils.book_append_sheet(wb, ws1, "Base de Datos");
+
+    // ─────────────────────────────────────────────────────────
+    // HOJA 2: Resumen BABIES
+    // ─────────────────────────────────────────────────────────
+    const conteo = { A: 0, B: 0, C: 0, D: 0 };
+    casos.forEach(c => { if (conteo[c.clasificacion] !== undefined) conteo[c.clasificacion]++; });
+    const total = casos.length;
+
+    const datosResumen = [
+      ["Celda", "Área BABIES", "Casos", "Porcentaje"],
+      ["A", "Salud Materna (≥2500g + Fetal)", conteo.A, total ? ((conteo.A / total) * 100).toFixed(1) + "%" : "0%"],
+      ["B", "Cuidado durante el Parto (≥2500g + Neonatal)", conteo.B, total ? ((conteo.B / total) * 100).toFixed(1) + "%" : "0%"],
+      ["C", "Cuidado durante el Embarazo (<2500g + Fetal)", conteo.C, total ? ((conteo.C / total) * 100).toFixed(1) + "%" : "0%"],
+      ["D", "Cuidado del Recién Nacido (<2500g + Neonatal)", conteo.D, total ? ((conteo.D / total) * 100).toFixed(1) + "%" : "0%"],
+      ["TOTAL", "", total, "100%"],
+    ];
+
+    const ws2 = XLSX.utils.aoa_to_sheet(datosResumen);
+    ws2["!cols"] = [{ wch: 8 }, { wch: 50 }, { wch: 10 }, { wch: 12 }];
+
+    // Header
+    estilizarRango(ws2, "A1:D1",
+      estiloXLSX({ bgColor: "2F5496", fontBold: true, fontColor: "FFFFFF",
+                   fontSize: 11, hAlign: "center", border: true })
+    );
+
+    // Fila A - Verde
+    estilizarRango(ws2, "A2:D2",
+      estiloXLSX({ bgColor: "C6EFCE", fontBold: true, border: true })
+    );
+    // Fila B - Azul
+    estilizarRango(ws2, "A3:D3",
+      estiloXLSX({ bgColor: "BDD7EE", fontBold: true, border: true })
+    );
+    // Fila C - Amarillo
+    estilizarRango(ws2, "A4:D4",
+      estiloXLSX({ bgColor: "FFEB9C", fontBold: true, border: true })
+    );
+    // Fila D - Rosa
+    estilizarRango(ws2, "A5:D5",
+      estiloXLSX({ bgColor: "FFB6C1", fontBold: true, border: true })
+    );
+    // Total - Gris
+    estilizarRango(ws2, "A6:D6",
+      estiloXLSX({ bgColor: "D9D9D9", fontBold: true, border: true })
+    );
+
+    XLSX.utils.book_append_sheet(wb, ws2, "Resumen BABIES");
+
+    // ─────────────────────────────────────────────────────────
+    // HOJA 3: Matriz BABIES (Peso × Tipo de Muerte)
+    // ─────────────────────────────────────────────────────────
+    const matrizBabies = [
+      ["", "Muerte Fetal", "Muerte Neonatal", "TOTAL"],
+      ["≥ 2500 g", 0, 0, 0],
+      ["< 2500 g", 0, 0, 0],
+      ["TOTAL", 0, 0, 0],
+    ];
+
+    casos.forEach(c => {
+      const esPesado = parseInt(c.peso) >= 2500;
+      const esFetal = c.tipo_muerte === "Fetal";
+      const fil = esPesado ? 1 : 2;
+      const col = esFetal ? 1 : 2;
+      matrizBabies[fil][col]++;
+      matrizBabies[fil][3]++;
+      matrizBabies[3][col]++;
+      matrizBabies[3][3]++;
+    });
+
+    const ws3 = XLSX.utils.aoa_to_sheet(matrizBabies);
+    ws3["!cols"] = [{ wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 10 }];
+
+    // Header row
+    estilizarRango(ws3, "A1:D1",
+      estiloXLSX({ bgColor: "2F5496", fontBold: true, fontColor: "FFFFFF",
+                   fontSize: 11, hAlign: "center", border: true })
+    );
+    // Celdas BABIES con colores (A=A2:B2, B=A2:C2...)
+    // A2B2 = ≥2500+Fetal = Celda A → Verde
+    if (ws3["B2"]) ws3["B2"].s = estiloXLSX({ bgColor: "C6EFCE", border: true, hAlign: "center" });
+    // A2C2 = ≥2500+Neonatal = Celda B → Azul
+    if (ws3["C2"]) ws3["C2"].s = estiloXLSX({ bgColor: "BDD7EE", border: true, hAlign: "center" });
+    // A3B3 = <2500+Fetal = Celda C → Amarillo
+    if (ws3["B3"]) ws3["B3"].s = estiloXLSX({ bgColor: "FFEB9C", border: true, hAlign: "center" });
+    // A3C3 = <2500+Neonatal = Celda D → Rosa
+    if (ws3["C3"]) ws3["C3"].s = estiloXLSX({ bgColor: "FFB6C1", border: true, hAlign: "center" });
+
+    // Encabezados de fila + totales
+    ["A2", "A3", "D2", "D3"].forEach(addr => {
+      if (!ws3[addr]) ws3[addr] = { v: "", t: "s" };
+      ws3[addr].s = estiloXLSX({ bgColor: "D9D9D9", fontBold: true, border: true, hAlign: "center" });
+    });
+    estilizarRango(ws3, "A4:D4",
+      estiloXLSX({ bgColor: "D9D9D9", fontBold: true, border: true, hAlign: "center" })
+    );
+
+    XLSX.utils.book_append_sheet(wb, ws3, "Matriz BABIES");
+
+    // ─────────────────────────────────────────────────────────
+    // HOJA 4: Matriz Momentos (Peso × Momento de Muerte)
+    // ─────────────────────────────────────────────────────────
+    const momentos = ["Anteparto", "Intraparto", "Prealta", "Postalta"];
+    const matrizMom = [
+      ["", ...momentos, "TOTAL"],
+      ["≥ 2500 g", 0, 0, 0, 0, 0],
+      ["< 2500 g", 0, 0, 0, 0, 0],
+      ["TOTAL", 0, 0, 0, 0, 0],
+    ];
+
+    casos.forEach(c => {
+      const esPesado = parseInt(c.peso) >= 2500;
+      const idxMom = momentos.findIndex(m =>
+        (c.momento_muerte || "").toLowerCase().startsWith(m.toLowerCase())
+      );
+      if (idxMom === -1) return;
+      const fil = esPesado ? 1 : 2;
+      const col = idxMom + 1;
+      matrizMom[fil][col]++;
+      matrizMom[fil][5]++;
+      matrizMom[3][col]++;
+      matrizMom[3][5]++;
+    });
+
+    const ws4 = XLSX.utils.aoa_to_sheet(matrizMom);
+    ws4["!cols"] = [{ wch: 14 }, { wch: 13 }, { wch: 13 }, { wch: 13 }, { wch: 13 }, { wch: 10 }];
+
+    estilizarRango(ws4, "A1:F1",
+      estiloXLSX({ bgColor: "2F5496", fontBold: true, fontColor: "FFFFFF",
+                   fontSize: 11, hAlign: "center", border: true })
+    );
+
+    // Filas ≥2500 (azul claro) y <2500 (amarillo claro)
+    estilizarRango(ws4, "A2:A3",
+      estiloXLSX({ bgColor: "D9D9D9", fontBold: true, border: true })
+    );
+    estilizarRango(ws4, "B2:E2",
+      estiloXLSX({ bgColor: "E2EFDA", border: true, hAlign: "center" }) // ≥2500 verde muy claro
+    );
+    estilizarRango(ws4, "B3:E3",
+      estiloXLSX({ bgColor: "FFF2CC", border: true, hAlign: "center" }) // <2500 amarillo muy claro
+    );
+    ["F2", "F3"].forEach(addr => {
+      if (!ws4[addr]) ws4[addr] = { v: "", t: "s" };
+      ws4[addr].s = estiloXLSX({ bgColor: "D9D9D9", fontBold: true, border: true, hAlign: "center" });
+    });
+    estilizarRango(ws4, "A4:F4",
+      estiloXLSX({ bgColor: "D9D9D9", fontBold: true, border: true, hAlign: "center" })
+    );
+
+    XLSX.utils.book_append_sheet(wb, ws4, "Matriz Momentos");
+
+    // ─────────────────────────────────────────────────────────
+    // HOJA 5: Indicadores por Área
+    // ─────────────────────────────────────────────────────────
+    const indicadoresData = [
+      ["Celda", "Área BABIES", "Descripción", "Casos", "%"],
+      [
+        "A", "Salud Materna",
+        "Muertes fetales ≥2500g. Refleja calidad de atención materna prenatal.",
+        conteo.A, total ? ((conteo.A / total) * 100).toFixed(1) + "%" : "0%"
+      ],
+      [
+        "B", "Cuidado durante el Parto",
+        "Muertes neonatales ≥2500g. Refleja calidad de atención del parto.",
+        conteo.B, total ? ((conteo.B / total) * 100).toFixed(1) + "%" : "0%"
+      ],
+      [
+        "C", "Cuidado durante el Embarazo",
+        "Muertes fetales <2500g. Refleja calidad de atención de embarazo de alto riesgo.",
+        conteo.C, total ? ((conteo.C / total) * 100).toFixed(1) + "%" : "0%"
+      ],
+      [
+        "D", "Cuidado del Recién Nacido",
+        "Muertes neonatales <2500g. Refleja calidad de atención neonatal.",
+        conteo.D, total ? ((conteo.D / total) * 100).toFixed(1) + "%" : "0%"
+      ],
+      ["", "TOTAL", "", total, "100%"],
+    ];
+
+    const ws5 = XLSX.utils.aoa_to_sheet(indicadoresData);
+    ws5["!cols"] = [
+      { wch: 8 }, { wch: 28 }, { wch: 55 }, { wch: 8 }, { wch: 8 }
+    ];
+
+    // Header
+    estilizarRango(ws5, "A1:E1",
+      estiloXLSX({ bgColor: "2F5496", fontBold: true, fontColor: "FFFFFF",
+                   fontSize: 11, hAlign: "center", border: true })
+    );
+
+    const coloresHoja5 = [
+      { rango: "A2:E2", bg: "C6EFCE" }, // A - Verde
+      { rango: "A3:E3", bg: "BDD7EE" }, // B - Azul
+      { rango: "A4:E4", bg: "FFEB9C" }, // C - Amarillo
+      { rango: "A5:E5", bg: "FFB6C1" }, // D - Rosa
+      { rango: "A6:E6", bg: "D9D9D9" }, // Total - Gris
+    ];
+
+    coloresHoja5.forEach(({ rango, bg }) => {
+      estilizarRango(ws5, rango,
+        estiloXLSX({ bgColor: bg, fontBold: false, border: true, wrapText: true })
+      );
+    });
+
+    // Celdas A y % centradas
+    [2, 3, 4, 5, 6].forEach(f => {
+      ["A", "D", "E"].forEach(col => {
+        const addr = col + f;
+        if (!ws5[addr]) ws5[addr] = { v: "", t: "s" };
+        const bgMap = { 2: "C6EFCE", 3: "BDD7EE", 4: "FFEB9C", 5: "FFB6C1", 6: "D9D9D9" };
+        ws5[addr].s = estiloXLSX({
+          bgColor: bgMap[f], fontBold: col === "A",
+          border: true, hAlign: "center"
+        });
+      });
+    });
+
+    // Altura de filas para descriptores largos
+    ws5["!rows"] = [{ hpt: 20 }, { hpt: 40 }, { hpt: 40 }, { hpt: 40 }, { hpt: 40 }, { hpt: 20 }];
+
+    XLSX.utils.book_append_sheet(wb, ws5, "Indicadores");
+
+    // ─────────────────────────────────────────────────────────
+    // GUARDAR ARCHIVO
+    // ─────────────────────────────────────────────────────────
+    const fecha = new Date().toISOString().split("T")[0];
+    XLSX.writeFile(wb, `BABIES_${fecha}.xlsx`);
+
+  } catch (err) {
+    console.error("Error al exportar Excel:", err);
+    alert("❌ Error al generar Excel:\n" + err.message);
+  }
+}
+// ============================================================
+// FIN DE LA FUNCIÓN exportarExcel()
+// ============================================================
+</script>
   
 // ══════════════════════════════════════════
 //  ANÁLISIS
