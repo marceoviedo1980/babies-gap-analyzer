@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -422,30 +422,45 @@ async function eliminar(id) {
 }
 
 // ══════════════════════════════════════════
-//  ESTILOS EXCEL
+//  ESTILOS EXCEL (HTML→XLS con colores)
 // ══════════════════════════════════════════
-const XS = {
-  titulo: { font:{bold:true,sz:13,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'0F6E5B'}}, alignment:{horizontal:'center'} },
-  subtit: { font:{italic:true,sz:10,color:{rgb:'5A7A75'}}, fill:{fgColor:{rgb:'E6F4F1'}} },
-  header: { font:{bold:true,sz:10,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'0F6E5B'}}, alignment:{horizontal:'center'}, border:{bottom:{style:'thin',color:{rgb:'FFFFFF'}}} },
-  normal: { font:{sz:10}, alignment:{horizontal:'left'} },
-  total:  { font:{bold:true,sz:10}, fill:{fgColor:{rgb:'FFF9C4'}}, alignment:{horizontal:'center'} },
-  celA:   { font:{bold:true,sz:10,color:{rgb:'1B5E20'}}, fill:{fgColor:{rgb:'C8E6C9'}}, alignment:{horizontal:'center'} },
-  celB:   { font:{bold:true,sz:10,color:{rgb:'0D47A1'}}, fill:{fgColor:{rgb:'BBDEFB'}}, alignment:{horizontal:'center'} },
-  celC:   { font:{bold:true,sz:10,color:{rgb:'E65100'}}, fill:{fgColor:{rgb:'FFF9C4'}}, alignment:{horizontal:'center'} },
-  celD:   { font:{bold:true,sz:10,color:{rgb:'880E4F'}}, fill:{fgColor:{rgb:'FCE4EC'}}, alignment:{horizontal:'center'} },
-  antep:  { font:{bold:true,sz:10,color:{rgb:'1B5E20'}}, fill:{fgColor:{rgb:'C8E6C9'}}, alignment:{horizontal:'center'} },
-  intrap: { font:{bold:true,sz:10,color:{rgb:'B71C1C'}}, fill:{fgColor:{rgb:'FFCDD2'}}, alignment:{horizontal:'center'} },
-  preat:  { font:{bold:true,sz:10,color:{rgb:'1A237E'}}, fill:{fgColor:{rgb:'E8EAF6'}}, alignment:{horizontal:'center'} },
-  postal: { font:{bold:true,sz:10,color:{rgb:'880E4F'}}, fill:{fgColor:{rgb:'FCE4EC'}}, alignment:{horizontal:'center'} },
-  numC:   { font:{sz:10}, alignment:{horizontal:'center'} },
-  pct:    { font:{sz:10}, alignment:{horizontal:'center'}, numFmt:'0.00' },
+// Colores por celda BABIES
+const COLOR = {
+  header_bg:'#0F6E5B', header_fg:'#FFFFFF',
+  subtit_bg:'#E6F4F1', subtit_fg:'#5A7A75',
+  total_bg:'#FFF9C4',  total_fg:'#000000',
+  A_bg:'#C8E6C9', A_fg:'#1B5E20',
+  B_bg:'#BBDEFB', B_fg:'#0D47A1',
+  C_bg:'#FFF9C4', C_fg:'#E65100',
+  D_bg:'#FCE4EC', D_fg:'#880E4F',
+  antep_bg:'#C8E6C9',  antep_fg:'#1B5E20',
+  intrap_bg:'#FFCDD2', intrap_fg:'#B71C1C',
+  preat_bg:'#E8EAF6',  preat_fg:'#1A237E',
+  postal_bg:'#FCE4EC', postal_fg:'#880E4F',
 };
 
-function celda(v, s) { return { v, s }; }
+function td(v, bg='#FFFFFF', fg='#000000', bold=false, center=false, w='') {
+  const fw = bold ? 'bold' : 'normal';
+  const al = center ? 'center' : 'left';
+  const ws = w ? `width:${w};` : '';
+  return `<td style="background:${bg};color:${fg};font-weight:${fw};text-align:${al};border:1px solid #CCCCCC;padding:5px 8px;${ws}">${v}</td>`;
+}
+function th(v, bg='#0F6E5B', fg='#FFFFFF', center=true) {
+  return `<td style="background:${bg};color:${fg};font-weight:bold;text-align:${center?'center':'left'};border:1px solid #CCCCCC;padding:5px 8px;">${v}</td>`;
+}
+function fila(...celdas) { return `<tr>${celdas.join('')}</tr>`; }
+function titulo(txt, cols) {
+  return `<tr><td colspan="${cols}" style="background:#0F6E5B;color:#FFFFFF;font-weight:bold;font-size:13pt;text-align:center;padding:10px;border:1px solid #0F6E5B;">${txt}</td></tr>`;
+}
+function subtit(txt, cols) {
+  return `<tr><td colspan="${cols}" style="background:#E6F4F1;color:#5A7A75;font-style:italic;text-align:left;padding:5px 8px;border:1px solid #CCCCCC;">${txt}</td></tr>`;
+}
+function tabla(id, filas) {
+  return `<table id="${id}" style="border-collapse:collapse;font-family:Calibri,sans-serif;font-size:10pt;">${filas}</table>`;
+}
 
 // ══════════════════════════════════════════
-//  EXCEL  (5 HOJAS CON COLORES)
+//  EXCEL  (5 HOJAS CON COLORES – HTML→XLS)
 // ══════════════════════════════════════════
 function exportarExcel() {
   const a = document.getElementById('fil-anio').value;
@@ -457,89 +472,150 @@ function exportarExcel() {
   });
   if (!datos.length) { toast('⚠️ Sin datos para exportar',true); return; }
 
-  const wb = XLSX.utils.book_new();
-  const fmtF = f => f ? new Date(f).toLocaleDateString('es-BO') : '';
-  const estCel = {'A':XS.celA,'B':XS.celB,'C':XS.celC,'D':XS.celD};
+  const fmtF = f => f ? new Date(f+'T12:00:00').toLocaleDateString('es-BO') : '';
 
   // ═══ HOJA 1: BASE DE DATOS ═══
-  const cols1 = ['id','fecha_evento','establecimiento','red_municipio','peso','tipo_muerte','momento_muerte','distrito','año','clasificacion','area_babies','fecha_registro'];
-  const head1 = ['ID','Fecha Evento','Establecimiento','Red / Municipio','Peso (g)','Tipo Muerte','Momento Muerte','Distrito','Año','Clasificacion','Area BABIES','Fecha Registro'];
-  const ws1 = XLSX.utils.aoa_to_sheet([
-    [celda('REPORTE DE MORTALIDAD PERINATAL - METODO BABIES', XS.titulo),...Array(cols1.length-1).fill(celda('',XS.titulo))],
-    [celda('Base de datos exportada desde la aplicacion', XS.subtit),...Array(cols1.length-1).fill(celda('',XS.subtit))],
-    head1.map(h => celda(h, XS.header)),
-    ...datos.map(c => cols1.map((k,i) => {
-      let v = k==='id'?c.id : k==='fecha_evento'?fmtF(c.fecha_evento) : k==='establecimiento'?(c.establecimiento||'') : k==='red_municipio'?(c.red_municipio||'') : k==='peso'?c.peso : k==='tipo_muerte'?c.tipo_muerte : k==='momento_muerte'?(c.momento_muerte||'') : k==='distrito'?(c.distrito||'') : k==='año'?c.año : k==='clasificacion'?c.clasificacion : k==='area_babies'?(AREAS[c.clasificacion]||'') : fmtF(c.fecha_registro);
-      const s = k==='clasificacion' ? (estCel[c.clasificacion]||XS.normal) : XS.normal;
-      return celda(v,s);
-    }))
-  ]);
-  ws1['!cols'] = [6,13,28,18,9,13,18,15,7,13,28,15].map(w=>({wch:w}));
-  ws1['!merges'] = [{s:{r:0,c:0},e:{r:0,c:cols1.length-1}},{s:{r:1,c:0},e:{r:1,c:cols1.length-1}}];
-  XLSX.utils.book_append_sheet(wb, ws1, 'Base de Datos');
+  let h1 = titulo('REPORTE DE MORTALIDAD PERINATAL - METODO BABIES', 12);
+  h1 += subtit('Base de datos exportada desde la aplicacion', 12);
+  h1 += fila(
+    th('ID'), th('Fecha Evento'), th('Establecimiento'), th('Red/Municipio'),
+    th('Peso (g)'), th('Tipo Muerte'), th('Momento Muerte'), th('Distrito'),
+    th('Año'), th('Clasificacion'), th('Area BABIES'), th('Fecha Registro')
+  );
+  datos.forEach(c => {
+    const bg = COLOR[c.clasificacion+'_bg']||'#FFFFFF';
+    const fg = COLOR[c.clasificacion+'_fg']||'#000000';
+    h1 += fila(
+      td(c.id), td(fmtF(c.fecha_evento)), td(c.establecimiento||''), td(c.red_municipio||''),
+      td(c.peso,'#FFFFFF','#000000',false,true), td(c.tipo_muerte), td(c.momento_muerte||''),
+      td(c.distrito||''), td(c.año,'#FFFFFF','#000000',false,true),
+      td(c.clasificacion, bg, fg, true, true),
+      td(AREAS[c.clasificacion]||'', bg, fg, true),
+      td(fmtF(c.fecha_registro))
+    );
+  });
 
   // ═══ HOJA 2: RESUMEN BABIES ═══
-  const ws2 = XLSX.utils.aoa_to_sheet([
-    [celda('RESUMEN DE AREAS BABIES', XS.titulo), celda('',XS.titulo), celda('',XS.titulo)],
-    [celda('Clasificacion automatica por peso y tipo de muerte', XS.subtit), celda('',XS.subtit), celda('',XS.subtit)],
-    [celda('clasificacion',XS.header), celda('area_babies',XS.header), celda('casos',XS.header)],
-    ...['A','B','C','D'].map(cel => {
-      const n = datos.filter(c=>c.clasificacion===cel).length;
-      return [celda(cel, estCel[cel]), celda(AREAS[cel], estCel[cel]), celda(n, {...estCel[cel], alignment:{horizontal:'center'}})];
-    }),
-    [celda('TOTAL DE CASOS', XS.total), celda('',XS.total), celda(datos.length, XS.total)]
-  ]);
-  ws2['!cols'] = [{wch:14},{wch:32},{wch:10}];
-  ws2['!merges'] = [{s:{r:0,c:0},e:{r:0,c:2}},{s:{r:1,c:0},e:{r:1,c:2}}];
-  XLSX.utils.book_append_sheet(wb, ws2, 'Resumen BABIES');
+  let h2 = titulo('RESUMEN DE AREAS BABIES', 3);
+  h2 += subtit('Clasificacion automatica por peso y tipo de muerte', 3);
+  h2 += fila(th('Clasificacion'), th('Area BABIES'), th('Casos'));
+  ['A','B','C','D'].forEach(cel => {
+    const n = datos.filter(c=>c.clasificacion===cel).length;
+    const bg = COLOR[cel+'_bg'], fg = COLOR[cel+'_fg'];
+    h2 += fila(td(cel,bg,fg,true,true), td(AREAS[cel],bg,fg,true), td(n,bg,fg,true,true));
+  });
+  h2 += fila(
+    td('TOTAL DE CASOS',COLOR.total_bg,COLOR.total_fg,true,true),
+    td('',COLOR.total_bg), td(datos.length,COLOR.total_bg,COLOR.total_fg,true,true)
+  );
 
   // ═══ HOJA 3: MATRIZ BABIES ═══
   const cnt = (p,t) => datos.filter(c=>(p==='lt'?c.peso<2500:c.peso>=2500)&&c.tipo_muerte===t).length;
-  const ws3 = XLSX.utils.aoa_to_sheet([
-    [celda('MATRIZ BABIES SIMPLIFICADA',XS.titulo),celda('',XS.titulo),celda('',XS.titulo),celda('',XS.titulo)],
-    [celda('Distribucion de muertes por grupo de peso y tipo de muerte',XS.subtit),celda('',XS.subtit),celda('',XS.subtit),celda('',XS.subtit)],
-    [celda('',XS.header),celda('Fetal',XS.header),celda('Neonatal',XS.header),celda('Total muertes',XS.header)],
-    [celda('< 2500 g',XS.celC), celda(cnt('lt','Fetal'),XS.celC), celda(cnt('lt','Neonatal'),XS.celD), celda(cnt('lt','Fetal')+cnt('lt','Neonatal'),XS.numC)],
-    [celda('>= 2500 g',XS.celA), celda(cnt('gte','Fetal'),XS.celA), celda(cnt('gte','Neonatal'),XS.celB), celda(cnt('gte','Fetal')+cnt('gte','Neonatal'),XS.numC)],
-    [celda('TOTAL GENERAL',XS.total), celda(datos.filter(c=>c.tipo_muerte==='Fetal').length,XS.total), celda(datos.filter(c=>c.tipo_muerte==='Neonatal').length,XS.total), celda(datos.length,XS.total)],
-  ]);
-  ws3['!cols'] = [{wch:14},{wch:12},{wch:12},{wch:14}];
-  ws3['!merges'] = [{s:{r:0,c:0},e:{r:0,c:3}},{s:{r:1,c:0},e:{r:1,c:3}}];
-  XLSX.utils.book_append_sheet(wb, ws3, 'Matriz BABIES');
+  let h3 = titulo('MATRIZ BABIES SIMPLIFICADA', 4);
+  h3 += subtit('Distribucion de muertes por grupo de peso y tipo de muerte', 4);
+  h3 += fila(th('Grupos de peso'), th('Fetal'), th('Neonatal'), th('Total muertes'));
+  h3 += fila(
+    td('&lt; 2500 g', COLOR.C_bg, COLOR.C_fg, true),
+    td(cnt('lt','Fetal'), COLOR.C_bg, COLOR.C_fg, true, true),
+    td(cnt('lt','Neonatal'), COLOR.D_bg, COLOR.D_fg, true, true),
+    td(cnt('lt','Fetal')+cnt('lt','Neonatal'), '#F5F5F5','#000000', true, true)
+  );
+  h3 += fila(
+    td('&gt;= 2500 g', COLOR.A_bg, COLOR.A_fg, true),
+    td(cnt('gte','Fetal'), COLOR.A_bg, COLOR.A_fg, true, true),
+    td(cnt('gte','Neonatal'), COLOR.B_bg, COLOR.B_fg, true, true),
+    td(cnt('gte','Fetal')+cnt('gte','Neonatal'), '#F5F5F5','#000000', true, true)
+  );
+  h3 += fila(
+    td('TOTAL GENERAL',COLOR.total_bg,COLOR.total_fg,true),
+    td(datos.filter(c=>c.tipo_muerte==='Fetal').length,COLOR.total_bg,COLOR.total_fg,true,true),
+    td(datos.filter(c=>c.tipo_muerte==='Neonatal').length,COLOR.total_bg,COLOR.total_fg,true,true),
+    td(datos.length,COLOR.total_bg,COLOR.total_fg,true,true)
+  );
 
   // ═══ HOJA 4: MATRIZ MOMENTOS ═══
   const MOM = ['Anteparto','Intraparto','Prealta','Postalta'];
-  const MOM_S = [XS.antep, XS.intrap, XS.preat, XS.postal];
+  const MOM_K = ['antep','intrap','preat','postal'];
   const cntM = (p,m) => datos.filter(c=>(p==='lt'?c.peso<2500:c.peso>=2500)&&c.momento_muerte===m).length;
-  const ws4 = XLSX.utils.aoa_to_sheet([
-    [celda('MATRIZ POR MOMENTO DE MUERTE',XS.titulo),...Array(5).fill(celda('',XS.titulo))],
-    [celda('Distribucion por peso y momento: anteparto, intraparto, prealta y postalta',XS.subtit),...Array(5).fill(celda('',XS.subtit))],
-    [celda('',XS.header),...MOM.map((m,i)=>celda(m,MOM_S[i])),celda('Total',XS.header)],
-    [celda('< 2500 g',XS.celC),...MOM.map((m,i)=>celda(cntM('lt',m),MOM_S[i])),celda(MOM.reduce((s,m)=>s+cntM('lt',m),0),XS.numC)],
-    [celda('>= 2500 g',XS.celA),...MOM.map((m,i)=>celda(cntM('gte',m),MOM_S[i])),celda(MOM.reduce((s,m)=>s+cntM('gte',m),0),XS.numC)],
-    [celda('TOTAL GENERAL',XS.total),...MOM.map(m=>celda(datos.filter(c=>c.momento_muerte===m).length,XS.total)),celda(datos.length,XS.total)],
-  ]);
-  ws4['!cols'] = [{wch:14},{wch:13},{wch:13},{wch:13},{wch:13},{wch:10}];
-  ws4['!merges'] = [{s:{r:0,c:0},e:{r:0,c:5}},{s:{r:1,c:0},e:{r:1,c:5}}];
-  XLSX.utils.book_append_sheet(wb, ws4, 'Matriz Momentos');
+  let h4 = titulo('MATRIZ POR MOMENTO DE MUERTE', 6);
+  h4 += subtit('Distribucion por peso y momento: anteparto, intraparto, prealta y postalta', 6);
+  h4 += fila(
+    th('Peso al nacer'),
+    ...MOM.map((m,i) => th(m, COLOR[MOM_K[i]+'_bg'], COLOR[MOM_K[i]+'_fg'])),
+    th('Total')
+  );
+  ['lt','gte'].forEach((p,pi) => {
+    const label = p==='lt' ? '&lt; 2500 g' : '&gt;= 2500 g';
+    const bg = p==='lt' ? COLOR.C_bg : COLOR.A_bg;
+    const fg = p==='lt' ? COLOR.C_fg : COLOR.A_fg;
+    const tot_p = MOM.reduce((s,m)=>s+cntM(p,m),0);
+    h4 += fila(
+      td(label,bg,fg,true),
+      ...MOM.map((m,i) => td(cntM(p,m), COLOR[MOM_K[i]+'_bg'], COLOR[MOM_K[i]+'_fg'], true, true)),
+      td(tot_p,'#F5F5F5','#000000',true,true)
+    );
+  });
+  h4 += fila(
+    td('TOTAL GENERAL',COLOR.total_bg,COLOR.total_fg,true),
+    ...MOM.map(m => td(datos.filter(c=>c.momento_muerte===m).length,COLOR.total_bg,COLOR.total_fg,true,true)),
+    td(datos.length,COLOR.total_bg,COLOR.total_fg,true,true)
+  );
 
   // ═══ HOJA 5: INDICADORES ═══
-  const tot = datos.length||1;
-  const ws5 = XLSX.utils.aoa_to_sheet([
-    [celda('INDICADORES BABIES',XS.titulo),celda('',XS.titulo),celda('',XS.titulo),celda('',XS.titulo)],
-    [celda('Resumen de casos por area de intervencion',XS.subtit),celda('',XS.subtit),celda('',XS.subtit),celda('',XS.subtit)],
-    [celda('codigo',XS.header),celda('area',XS.header),celda('casos',XS.header),celda('porcentaje',XS.header)],
-    ...['A','B','C','D'].map(c => {
-      const n = datos.filter(x=>x.clasificacion===c).length;
-      return [celda(c,estCel[c]), celda(AREAS[c],estCel[c]), celda(n,{...estCel[c],alignment:{horizontal:'center'}}), celda(+(n/tot*100).toFixed(2),{...estCel[c],alignment:{horizontal:'center'}})];
-    }),
-    [celda('TOTAL',XS.total),celda('',XS.total),celda(datos.length,XS.total),celda(100,XS.total)],
-  ]);
-  ws5['!cols'] = [{wch:10},{wch:32},{wch:10},{wch:12}];
-  ws5['!merges'] = [{s:{r:0,c:0},e:{r:0,c:3}},{s:{r:1,c:0},e:{r:1,c:3}}];
-  XLSX.utils.book_append_sheet(wb, ws5, 'Indicadores');
+  const tot5 = datos.length || 1;
+  let h5 = titulo('INDICADORES BABIES', 4);
+  h5 += subtit('Resumen de casos por area de intervencion', 4);
+  h5 += fila(th('Codigo'), th('Area BABIES'), th('Casos'), th('Porcentaje (%)'));
+  ['A','B','C','D'].forEach(c => {
+    const n = datos.filter(x=>x.clasificacion===c).length;
+    const bg = COLOR[c+'_bg'], fg = COLOR[c+'_fg'];
+    h5 += fila(td(c,bg,fg,true,true), td(AREAS[c],bg,fg,true), td(n,bg,fg,true,true), td((n/tot5*100).toFixed(2)+'%',bg,fg,true,true));
+  });
+  h5 += fila(
+    td('TOTAL',COLOR.total_bg,COLOR.total_fg,true,true),
+    td('',COLOR.total_bg),
+    td(datos.length,COLOR.total_bg,COLOR.total_fg,true,true),
+    td('100%',COLOR.total_bg,COLOR.total_fg,true,true)
+  );
 
-  XLSX.writeFile(wb, `BABIES_${new Date().toISOString().slice(0,10)}.xlsx`);
+  // ═══ GENERAR ARCHIVO ═══
+  const sheets = [
+    {name:'Base de Datos',  html:h1},
+    {name:'Resumen BABIES', html:h2},
+    {name:'Matriz BABIES',  html:h3},
+    {name:'Matriz Momentos',html:h4},
+    {name:'Indicadores',    html:h5},
+  ];
+
+  const sheetsXML = sheets.map(s=>`<x:ExcelWorksheet><x:Name>${s.name}</x:Name><x:WorksheetOptions><x:FreezePanes/></x:WorksheetOptions></x:ExcelWorksheet>`).join('');
+  const tablas = sheets.map(s => tabla(s.name.replace(/ /g,'_'), s.html)).join('<br/>');
+
+  const html = `
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:x="urn:schemas-microsoft-com:office:excel"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+  <meta charset="UTF-8"/>
+  <xml>
+    <x:ExcelWorkbook>
+      <x:ExcelWorksheets>${sheetsXML}</x:ExcelWorksheets>
+    </x:ExcelWorkbook>
+  </xml>
+  <style>
+    table { border-collapse:collapse; font-family:Calibri,sans-serif; font-size:10pt; }
+    td, th { border:1px solid #CCCCCC; padding:5px 8px; white-space:nowrap; }
+  </style>
+</head>
+<body>${tablas}</body>
+</html>`;
+
+  const blob = new Blob([html], {type:'application/vnd.ms-excel;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  const a2   = document.createElement('a');
+  a2.href    = url;
+  a2.download= `BABIES_${new Date().toISOString().slice(0,10)}.xls`;
+  a2.click();
+  URL.revokeObjectURL(url);
   toast('📥 Excel descargado (5 hojas con colores)');
 }
 
