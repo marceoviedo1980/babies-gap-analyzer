@@ -1,22 +1,24 @@
 {
   "name": "BABIES – Mortalidad Perinatal",
   "short_name": "BABIES",
-  "description": "Registro y análisis de mortalidad perinatal con el método BABIES",
-  "start_url": "./index.html",
+  "description": "Registro y análisis de mortalidad perinatal – Hospital Municipal La Portada",
+  "start_url": "./",
   "display": "standalone",
-  "background_color": "#f0faf8",
+  "background_color": "#0f6e5b",
   "theme_color": "#0f6e5b",
   "orientation": "portrait",
   "icons": [
     {
       "src": "icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
