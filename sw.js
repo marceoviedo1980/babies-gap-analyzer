@@ -1,4 +1,4 @@
-const CACHE = 'babies-pwa-v7';
+const CACHE_NAME = 'babies-pwa-v8';
 const ASSETS = [
   './',
   './index.html',
@@ -7,35 +7,40 @@ const ASSETS = [
   './icon-512.png'
 ];
 
-// INSTALL
-self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(cache => cache.addAll(ASSETS))
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
   );
   self.skipWaiting();
 });
 
-// ACTIVATE — elimina caches viejos
-self.addEventListener('activate', e => {
-  e.waitUntil(
+self.addEventListener('activate', event => {
+  event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(
-        keys.filter(k => k !== CACHE)
-            .map(k => caches.delete(k))
-      )
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
     )
   );
   self.clients.claim();
 });
 
-// FETCH — cache-first para assets locales, network para el resto
-self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
-  if (e.request.url.includes('supabase')) return;
-  if (e.request.url.includes('cdn.jsdelivr.net')) return;
-  if (e.request.url.includes('fonts.googleapis.com')) return;
-  if (e.request.url.includes('cdnjs.cloudflare.com')) return;
-  e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
+self.addEventListener('fetch', event => {
+  // Para Supabase: siempre red primero
+  if (event.request.url.includes('supabase.co')) {
+    event.respondWith(fetch(event.request).catch(() => new Response('', {status:503})));
+    return;
+  }
+  // Para CDN scripts: red primero, caché como fallback
+  if (event.request.url.includes('cdn.jsdelivr.net') ||
+      event.request.url.includes('cdnjs.cloudflare.com')) {
+    event.respondWith(
+      fetch(event.request)
+        .then(res => { const cl = res.clone(); caches.open(CACHE_NAME).then(c => c.put(event.request,cl)); return res; })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+  // Assets locales: caché primero
+  event.respondWith(
+    caches.match(event.request).then(cached => cached || fetch(event.request))
   );
 });
