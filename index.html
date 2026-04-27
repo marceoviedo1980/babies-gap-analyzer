@@ -195,6 +195,7 @@
   <div>
     <h1>🍼 BABIES Gap Analyzer</h1>
     <p>Hospital Municipal La Portada — La Paz, Bolivia</p>
+    <p style="font-size:.72rem;opacity:.7;margin-top:2px">Creado por: Marcelo Oviedo L.</p>
   </div>
 </header>
 
@@ -636,6 +637,14 @@ function aplicarFiltros() {
   renderTabla();
 }
 
+function fmtFecha(f) {
+  if (!f) return '';
+  try {
+    const d = new Date(f);
+    return d.toLocaleDateString('es-BO', {day:'2-digit', month:'2-digit', year:'numeric'});
+  } catch(e) { return f; }
+}
+
 function renderTabla() {
   const cont = document.getElementById('tablaContenedor');
   if (!filtrados.length) {
@@ -651,7 +660,7 @@ function renderTabla() {
   filtrados.forEach(c => {
     const cl = c.clasificacion || '';
     html += `<tr>
-      <td>${c.fecha_evento || ''}</td>
+      <td>${fmtFecha(c.fecha_evento)}</td>
       <td>${c.establecimiento || ''}</td>
       <td>${c.distrito || ''}</td>
       <td>${c.peso || ''}</td>
@@ -1055,49 +1064,101 @@ function renderHistMomento() {
 // ═══════════════════════════════════════════════
 //  EXPORTAR EXCEL (5 hojas)
 // ═══════════════════════════════════════════════
+
+// Helper: aplica estilos a todas las celdas de datos de una hoja
+function excelSetColWidths(ws, widths) {
+  ws['!cols'] = widths.map(w => ({ wch: w }));
+}
+
+// Helper: estilo de fila alternada
+function rowStyle(ri, extraStyle) {
+  const base = { fill: { fgColor: { rgb: ri % 2 === 0 ? 'FFFFFF' : 'EAF0FB' } }, ...extraStyle };
+  return base;
+}
+
 function exportarExcel() {
   if (!todos.length) { setStatus('⚠️ No hay datos para exportar.', 'warn'); return; }
   setStatus('⏳ Generando Excel…');
 
   const wb = XLSX.utils.book_new();
-  const hStyle = { font:{bold:true,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'1A5276'}}, alignment:{horizontal:'center'} };
-  const cellStyles = { A:{rgb:'2980B9'}, B:{rgb:'27AE60'}, C:{rgb:'E67E22'}, D:{rgb:'8E44AD'} };
+  const hStyle = { font:{bold:true,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'1A5276'}}, alignment:{horizontal:'center',wrapText:true} };
+  const hStyleMoment = {
+    Anteparto: { font:{bold:true,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'2471A3'}}, alignment:{horizontal:'center'} },
+    Intraparto:{ font:{bold:true,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'C0392B'}}, alignment:{horizontal:'center'} },
+    Prealta:   { font:{bold:true,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'1E8449'}}, alignment:{horizontal:'center'} },
+    Postalta:  { font:{bold:true,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'8E44AD'}}, alignment:{horizontal:'center'} },
+  };
+  const cellFonts = {
+    A:{rgb:'2980B9'}, B:{rgb:'27AE60'}, C:{rgb:'E67E22'}, D:{rgb:'8E44AD'}
+  };
+  const totalStyle = { font:{bold:true,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'2C3E50'}}, alignment:{horizontal:'center'} };
+
+  // Helper aplicar estilo a celda
+  function applyStyle(ws, r, c, s) {
+    const addr = XLSX.utils.encode_cell({r, c});
+    ws[addr] = ws[addr] || { v: '', t: 's' };
+    ws[addr].s = s;
+  }
 
   // ── Hoja 1: Base de Datos ──
   const h1 = [['ID','Fecha Evento','Establecimiento','Red/Municipio','Distrito','Peso (g)','Grupo Peso','Tipo Muerte','Momento','Año','Celda','Área BABIES','Fecha Registro']];
-  todos.forEach(c => h1.push([
-    c.id, c.fecha_evento, c.establecimiento, c.red_municipio, c.distrito,
-    c.peso, c.peso ? grupoPeso(c.peso) : '', c.tipo_muerte, c.momento_muerte,
-    c.año, c.clasificacion, c.area_babies, c.fecha_registro
-  ]));
+  todos.forEach(c => {
+    const fr = c.fecha_registro ? new Date(c.fecha_registro).toLocaleDateString('es-BO',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+    h1.push([
+      c.id, c.fecha_evento || '', c.establecimiento || '', c.red_municipio || '', c.distrito || '',
+      c.peso || '', c.peso ? grupoPeso(c.peso) : '', c.tipo_muerte || '', c.momento_muerte || '',
+      c.año || '', c.clasificacion || '', c.area_babies || '', fr
+    ]);
+  });
   const ws1 = XLSX.utils.aoa_to_sheet(h1);
-  h1[0].forEach((_,i) => {
-    const addr = XLSX.utils.encode_cell({r:0,c:i});
-    ws1[addr] = ws1[addr] || {};
-    ws1[addr].s = hStyle;
+  // Cabecera
+  h1[0].forEach((_,i) => applyStyle(ws1, 0, i, hStyle));
+  // Filas de datos: alternadas + color celda
+  todos.forEach((caso, ri) => {
+    const isEven = ri % 2 === 0;
+    const bgRgb = isEven ? 'FFFFFF' : 'D6EAF8';
+    const cl = caso.clasificacion;
+    for (let ci = 0; ci < h1[0].length; ci++) {
+      const addr = XLSX.utils.encode_cell({r: ri+1, c: ci});
+      ws1[addr] = ws1[addr] || { v: '', t: 's' };
+      if (ci === 10 && cl && cellFonts[cl]) {
+        // Columna Celda: texto de color con fondo alternado
+        ws1[addr].s = { font:{bold:true,color:{rgb:cellFonts[cl].rgb}}, fill:{fgColor:{rgb:bgRgb}}, alignment:{horizontal:'center'} };
+      } else {
+        ws1[addr].s = { fill:{fgColor:{rgb:bgRgb}}, alignment: ci === 0 ? {horizontal:'center'} : {} };
+      }
+    }
   });
-  todos.forEach((_,ri) => {
-    const cl = todos[ri].clasificacion;
-    if (!cl || !cellStyles[cl]) return;
-    const addr = XLSX.utils.encode_cell({r:ri+1,c:10});
-    ws1[addr] = ws1[addr] || {};
-    ws1[addr].s = { font:{bold:true,color:{rgb:cellStyles[cl].rgb}}, alignment:{horizontal:'center'} };
-  });
+  excelSetColWidths(ws1, [6, 14, 26, 16, 16, 10, 15, 13, 13, 8, 8, 30, 18]);
   XLSX.utils.book_append_sheet(wb, ws1, 'Base de Datos');
 
   // ── Hoja 2: Resumen por Celda ──
   const años = [...new Set(todos.map(c=>c.año).filter(Boolean))].sort();
-  const h2 = [['Celda','Área','Total','% del Total']];
-  ['A','B','C','D'].forEach(c => {
+  const h2 = [['Celda','Área BABIES','N° Casos','% del Total']];
+  const cellRows2 = ['A','B','C','D'].map(c => {
     const n = todos.filter(x => x.clasificacion === c).length;
-    h2.push([c, areaBabies(c), n, todos.length ? ((n/todos.length)*100).toFixed(1)+'%' : '0%']);
+    return [c, areaBabies(c), n, todos.length ? ((n/todos.length)*100).toFixed(1)+'%' : '0%'];
   });
-  h2.push(['TOTAL','',todos.length,'100%']);
+  cellRows2.forEach(r => h2.push(r));
+  h2.push(['TOTAL','Mortalidad Perinatal', todos.length, '100%']);
   const ws2 = XLSX.utils.aoa_to_sheet(h2);
-  h2[0].forEach((_,i) => {
-    const a = XLSX.utils.encode_cell({r:0,c:i});
-    ws2[a] = ws2[a]||{}; ws2[a].s = hStyle;
+  h2[0].forEach((_,i) => applyStyle(ws2, 0, i, hStyle));
+  cellRows2.forEach((row, ri) => {
+    const cl = row[0];
+    const bgRgb = ri % 2 === 0 ? 'FFFFFF' : 'D6EAF8';
+    for (let ci = 0; ci < 4; ci++) {
+      const addr = XLSX.utils.encode_cell({r: ri+1, c: ci});
+      ws2[addr] = ws2[addr] || { v: '', t: 's' };
+      if (ci === 0 && cellFonts[cl]) {
+        ws2[addr].s = { font:{bold:true,color:{rgb:cellFonts[cl].rgb}}, fill:{fgColor:{rgb:bgRgb}}, alignment:{horizontal:'center'} };
+      } else {
+        ws2[addr].s = { fill:{fgColor:{rgb:bgRgb}}, alignment: ci >= 2 ? {horizontal:'center'} : {} };
+      }
+    }
   });
+  // Fila TOTAL
+  for (let ci = 0; ci < 4; ci++) applyStyle(ws2, h2.length-1, ci, totalStyle);
+  excelSetColWidths(ws2, [10, 34, 12, 14]);
   XLSX.utils.book_append_sheet(wb, ws2, 'Resumen por Celda');
 
   // ── Hoja 3: Matriz BABIES Oficial (5 grupos × 4 momentos) ──
@@ -1111,43 +1172,65 @@ function exportarExcel() {
     if (matrizData[g] && m in matrizData[g]) matrizData[g][m]++;
   });
   const totM = {}; MOMENTOS.forEach(m => totM[m] = 0);
+  const matrizRows3 = [];
   GRUPOS_PESO.forEach(g => {
     const row = [g];
     let rowT = 0;
     MOMENTOS.forEach(m => { row.push(matrizData[g][m]); totM[m] += matrizData[g][m]; rowT += matrizData[g][m]; });
     row.push(rowT);
+    matrizRows3.push(row);
     h3.push(row);
   });
   const totRow = ['TOTAL', ...MOMENTOS.map(m=>totM[m]), MOMENTOS.reduce((s,m)=>s+totM[m],0)];
   h3.push(totRow);
   const ws3 = XLSX.utils.aoa_to_sheet(h3);
-  const colColors3 = {1:'2471A3',2:'C0392B',3:'1E8449',4:'8E44AD'};
-  h3[0].forEach((_,i) => {
-    const a = XLSX.utils.encode_cell({r:0,c:i});
-    ws3[a] = ws3[a]||{};
-    const bg = colColors3[i] || '1A5276';
-    ws3[a].s = { font:{bold:true,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:bg}}, alignment:{horizontal:'center'} };
+  // Cabecera col 0 normal, cols 1-4 por momento, col 5 total
+  applyStyle(ws3, 0, 0, hStyle);
+  MOMENTOS.forEach((m,i) => applyStyle(ws3, 0, i+1, hStyleMoment[m]));
+  applyStyle(ws3, 0, 5, totalStyle);
+  // Filas de datos
+  matrizRows3.forEach((row, ri) => {
+    const bgRgb = ri % 2 === 0 ? 'FFFFFF' : 'D6EAF8';
+    const rStyle = { fill:{fgColor:{rgb:bgRgb}}, alignment:{horizontal:'center'} };
+    applyStyle(ws3, ri+1, 0, { font:{bold:true}, fill:{fgColor:{rgb:bgRgb}}, alignment:{horizontal:'left'} });
+    for (let ci = 1; ci <= 5; ci++) applyStyle(ws3, ri+1, ci, rStyle);
   });
+  // Fila TOTAL
+  for (let ci = 0; ci <= 5; ci++) applyStyle(ws3, h3.length-1, ci, totalStyle);
+  excelSetColWidths(ws3, [16, 14, 14, 14, 14, 10]);
   XLSX.utils.book_append_sheet(wb, ws3, 'Matriz BABIES Oficial');
 
   // ── Hoja 4: Histórico por Gestión ──
   const h4 = [['Gestión','Total','Celda A','Celda B','Celda C','Celda D','Mort. Fetal','Mort. Neonatal']];
-  años.forEach(a => {
+  const histRows = años.map(a => {
     const g = todos.filter(c => c.año === a);
-    h4.push([a, g.length,
+    return [a, g.length,
       g.filter(c=>c.clasificacion==='A').length,
       g.filter(c=>c.clasificacion==='B').length,
       g.filter(c=>c.clasificacion==='C').length,
       g.filter(c=>c.clasificacion==='D').length,
       g.filter(c=>c.tipo_muerte==='Fetal').length,
       g.filter(c=>c.tipo_muerte==='Neonatal').length
-    ]);
+    ];
   });
+  histRows.forEach(r => h4.push(r));
   const ws4 = XLSX.utils.aoa_to_sheet(h4);
-  h4[0].forEach((_,i) => {
-    const a = XLSX.utils.encode_cell({r:0,c:i});
-    ws4[a] = ws4[a]||{}; ws4[a].s = hStyle;
+  h4[0].forEach((_,i) => applyStyle(ws4, 0, i, hStyle));
+  histRows.forEach((row, ri) => {
+    const bgRgb = ri % 2 === 0 ? 'FFFFFF' : 'D6EAF8';
+    for (let ci = 0; ci < 8; ci++) {
+      const cStyles = {
+        2: cellFonts.A.rgb, 3: cellFonts.B.rgb,
+        4: cellFonts.C.rgb, 5: cellFonts.D.rgb
+      };
+      const addr = XLSX.utils.encode_cell({r: ri+1, c: ci});
+      ws4[addr] = ws4[addr] || { v: '', t: 's' };
+      ws4[addr].s = cStyles[ci]
+        ? { font:{bold:true,color:{rgb:cStyles[ci]}}, fill:{fgColor:{rgb:bgRgb}}, alignment:{horizontal:'center'} }
+        : { fill:{fgColor:{rgb:bgRgb}}, alignment:{horizontal:'center'} };
+    }
   });
+  excelSetColWidths(ws4, [12, 10, 12, 12, 12, 12, 14, 16]);
   XLSX.utils.book_append_sheet(wb, ws4, 'Histórico por Gestión');
 
   // ── Hoja 5: Tasas Ministerio ──
@@ -1158,20 +1241,28 @@ function exportarExcel() {
   const tasas = [
     ['Mort. Salud Materna (Celda A)', baseNV.filter(c=>c.clasificacion==='A').length, nv, 'Óbitos fetales ≥2500g / NV'],
     ['Mort. Cuidados Prenatales (Celda C)', baseNV.filter(c=>c.clasificacion==='C').length, nv, 'Óbitos fetales <2500g / NV'],
-    ['Mort. Intraparto (Celda A+C Intraparto)', baseNV.filter(c=>c.momento_muerte==='Intraparto').length, nv, 'Total muertes intraparto / NV'],
+    ['Mort. Intraparto', baseNV.filter(c=>c.momento_muerte==='Intraparto').length, nv, 'Total muertes intraparto / NV'],
     ['Mort. RN Institucional (Prealta)', baseNV.filter(c=>c.momento_muerte==='Prealta').length, nv, 'Muertes neonatales antes del alta / NV'],
     ['Mort. Neonatal Tardía (Postalta)', baseNV.filter(c=>c.momento_muerte==='Postalta').length, nv, 'Muertes neonatales después del alta / NV'],
     ['Mort. Perinatal Total', baseNV.length, nv, 'Total muertes perinatales / NV']
   ];
-  tasas.forEach(([ind, num, den, interp]) => {
+  tasas.forEach(([ind, num, den, interp], ri) => {
     const tasa = den > 0 ? ((num/den)*1000).toFixed(2) : 'N/D (ingresar NV)';
     h5.push([ind, num, den || '(ingresar)', tasa, interp]);
   });
   const ws5 = XLSX.utils.aoa_to_sheet(h5);
-  h5[0].forEach((_,i) => {
-    const a = XLSX.utils.encode_cell({r:0,c:i});
-    ws5[a] = ws5[a]||{}; ws5[a].s = hStyle;
+  h5[0].forEach((_,i) => applyStyle(ws5, 0, i, hStyle));
+  tasas.forEach((_, ri) => {
+    const bgRgb = ri % 2 === 0 ? 'FFFFFF' : 'D6EAF8';
+    for (let ci = 0; ci < 5; ci++) {
+      const addr = XLSX.utils.encode_cell({r: ri+1, c: ci});
+      ws5[addr] = ws5[addr] || { v: '', t: 's' };
+      ws5[addr].s = { fill:{fgColor:{rgb:bgRgb}},
+        font: ci === 3 ? {bold:true, color:{rgb:'1A5276'}} : {},
+        alignment: ci === 0 ? {} : {horizontal:'center'} };
+    }
   });
+  excelSetColWidths(ws5, [36, 14, 16, 18, 40]);
   XLSX.utils.book_append_sheet(wb, ws5, 'Tasas Ministerio');
 
   // Generar archivo
@@ -1347,18 +1438,22 @@ function exportarPDF() {
   };
 
   doc.setFillColor(234,240,251);
-  doc.roundedRect(14, y, 182, 28, 3, 3, 'F');
+  // Calcular líneas necesarias para la conclusión
+  const concLines = celdaMayor ? doc.splitTextToSize('• ' + interpretaciones2[celdaMayor], 168) : [];
+  const boxHeight = 16 + (concLines.length * 6) + 10;
+  doc.roundedRect(14, y, 182, boxHeight, 3, 3, 'F');
   doc.setFontSize(10); doc.setFont('helvetica','bold');
   doc.setTextColor(26,82,118);
-  doc.text('CONCLUSIONES Y RECOMENDACIONES', 20, y+7);
+  doc.text('CONCLUSIONES Y RECOMENDACIONES', 20, y+8);
   doc.setFont('helvetica','normal'); doc.setFontSize(9);
   doc.setTextColor(0,0,0);
-  if (celdaMayor) {
-    const lines = doc.splitTextToSize('• ' + interpretaciones2[celdaMayor], 170);
-    doc.text(lines, 20, y+14);
+  let yConc = y + 16;
+  if (celdaMayor && concLines.length) {
+    doc.text(concLines, 20, yConc, { lineHeightFactor: 1.6 });
+    yConc += concLines.length * 6 + 4;
   }
-  doc.text('• Total de muertes perinatales registradas en el período: ' + total, 20, y + (celdaMayor ? 20 : 14));
-  y += 34;
+  doc.text('• Total de muertes perinatales registradas en el período: ' + total, 20, yConc);
+  y += boxHeight + 6;
 
   // ── Firmas ──
   if (y > 255) { doc.addPage(); y = 20; }
