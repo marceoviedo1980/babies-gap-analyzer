@@ -1,749 +1,1402 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BABIES – Mortalidad Perinatal</title>
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#0f6e5b" />
-  <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    :root{--verde:#0f6e5b;--verde-med:#1a9076;--verde-lite:#e6f4f1;--verde-bg:#f0faf8;--acento:#f4a726;--rojo:#e05252;--text:#1a2e2b;--text-sec:#5a7a75;--border:#d0e8e3;--white:#fff;--radius:14px;--shadow:0 2px 12px rgba(15,110,91,.10);}
-    *{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:'DM Sans',sans-serif;background:var(--verde-bg);color:var(--text);min-height:100dvh;overflow-x:hidden;}
-    header{background:var(--verde);color:#fff;padding:16px 20px 12px;position:sticky;top:0;z-index:100;box-shadow:0 2px 10px rgba(0,0,0,.2);}
-    header h1{font-family:'Space Grotesk',sans-serif;font-size:1.2rem;}
-    header p{font-size:.74rem;opacity:.72;margin-top:2px;}
-    nav{display:flex;background:var(--verde);border-top:1px solid rgba(255,255,255,.15);overflow-x:auto;scrollbar-width:none;}
-    nav::-webkit-scrollbar{display:none;}
-    nav button{flex:1;min-width:72px;padding:10px 6px;border:none;background:transparent;color:rgba(255,255,255,.62);font-family:'DM Sans',sans-serif;font-size:.77rem;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap;}
-    nav button.active{color:#fff;border-bottom-color:var(--acento);}
-    main{padding:16px 14px 100px;max-width:700px;margin:0 auto;}
-    .tab-panel{display:none;}.tab-panel.active{display:block;animation:fadeIn .22s ease;}
-    @keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
-    .card{background:var(--white);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:14px;}
-    .card-title{font-family:'Space Grotesk',sans-serif;font-size:.95rem;font-weight:700;color:var(--verde);margin-bottom:14px;display:flex;align-items:center;gap:7px;}
-    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-    .form-group{margin-bottom:12px;}
-    label{display:block;font-size:.79rem;font-weight:600;color:var(--text-sec);margin-bottom:4px;}
-    input,select{width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:.91rem;font-family:'DM Sans',sans-serif;background:#fff;color:var(--text);transition:border-color .2s;-webkit-appearance:none;}
-    input:focus,select:focus{outline:none;border-color:var(--verde-med);box-shadow:0 0 0 3px rgba(15,110,91,.12);}
-    .btn{display:inline-flex;align-items:center;gap:7px;padding:12px 20px;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:all .2s;}
-    .btn-primary{background:var(--verde);color:#fff;width:100%;justify-content:center;}
-    .btn-primary:hover{background:var(--verde-med);}
-    .btn-del{background:#fde8e8;color:var(--rojo);padding:6px 10px;font-size:.79rem;border:none;border-radius:7px;cursor:pointer;}
-    .btn-excel{background:#e8f5e9;color:#2e7d32;width:100%;justify-content:center;margin-top:10px;}
-    .badge-preview{display:none;margin:12px 0;padding:13px;border-radius:10px;font-weight:700;font-size:.91rem;text-align:center;border:2px solid;}
-    .badge-A{background:#e8f5e9;color:#2e7d32;border-color:#81c784;}
-    .badge-B{background:#e3f2fd;color:#1565c0;border-color:#64b5f6;}
-    .badge-C{background:#fff8e1;color:#e65100;border-color:#ffb74d;}
-    .badge-D{background:#fce4ec;color:#880e4f;border-color:#f48fb1;}
-    .table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border);max-height:360px;overflow-y:auto;}
-    table{width:100%;border-collapse:collapse;font-size:.79rem;}
-    th{background:var(--verde);color:#fff;padding:9px 10px;text-align:left;font-weight:600;white-space:nowrap;position:sticky;top:0;}
-    td{padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap;}
-    tr:last-child td{border-bottom:none;}
-    tr:nth-child(even) td{background:var(--verde-bg);}
-    .cel{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.75rem;font-weight:700;}
-    .cel-A{background:#e8f5e9;color:#2e7d32;}.cel-B{background:#e3f2fd;color:#1565c0;}
-    .cel-C{background:#fff8e1;color:#e65100;}.cel-D{background:#fce4ec;color:#880e4f;}
-    .filters{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
-    .filters select{flex:1;min-width:110px;padding:9px 11px;font-size:.82rem;}
-    .stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px;}
-    @media(min-width:460px){.stats-grid{grid-template-columns:repeat(4,1fr);}}
-    .stat-card{background:var(--white);border-radius:10px;padding:12px 14px;border:1.5px solid var(--border);box-shadow:var(--shadow);}
-    .stat-label{font-size:.72rem;color:var(--text-sec);font-weight:600;margin-bottom:3px;}
-    .stat-value{font-size:1.5rem;font-weight:700;color:var(--verde);font-family:'Space Grotesk',sans-serif;}
-    .matrix{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:14px 0;}
-    .matrix-cell{padding:13px;border-radius:10px;border:2px solid;}
-    .mc-letter{font-family:'Space Grotesk',sans-serif;font-size:1.25rem;font-weight:700;}
-    .mc-name{font-size:.7rem;font-weight:600;margin:2px 0 5px;opacity:.8;}
-    .mc-rate{font-size:1.05rem;font-weight:700;}
-    .mc-brecha{font-size:.77rem;font-weight:600;margin-top:4px;}
-    .mc-A{background:#e8f5e9;border-color:#81c784;color:#2e7d32;}
-    .mc-B{background:#e3f2fd;border-color:#64b5f6;color:#1565c0;}
-    .mc-C{background:#fff8e1;border-color:#ffb74d;color:#e65100;}
-    .mc-D{background:#fce4ec;border-color:#f48fb1;color:#880e4f;}
-    canvas{width:100%!important;max-height:240px;}
-    .hist-row{display:flex;align-items:center;gap:7px;margin-bottom:7px;}
-    .hist-label{font-size:.78rem;font-weight:600;color:var(--text-sec);min-width:82px;}
-    .hist-bar{height:20px;background:var(--verde);border-radius:4px;transition:width .4s;}
-    .hist-count{font-size:.78rem;font-weight:700;color:var(--verde);min-width:24px;}
-    .info-box{background:var(--verde-lite);border-left:4px solid var(--verde-med);border-radius:0 8px 8px 0;padding:10px 13px;font-size:.79rem;color:var(--text-sec);margin-bottom:14px;}
-    .info-box strong{color:var(--verde);}
-    hr.div{border:none;border-top:1.5px solid var(--border);margin:13px 0;}
-    .ind-table{width:100%;border-collapse:collapse;font-size:.83rem;}
-    .ind-table th{background:var(--verde);color:#fff;padding:9px 12px;text-align:left;}
-    .ind-table td{padding:9px 12px;border-bottom:1px solid var(--border);}
-    .ind-table .tot td{border-bottom:none;font-weight:700;background:#fffde7;}
-    #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--verde);color:#fff;padding:11px 20px;border-radius:28px;font-size:.85rem;font-weight:600;box-shadow:0 4px 18px rgba(0,0,0,.2);transition:transform .3s ease;z-index:999;white-space:nowrap;}
-    #toast.show{transform:translateX(-50%) translateY(0);}
-    #toast.error{background:var(--rojo);}
-    .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .empty{text-align:center;padding:26px 14px;color:var(--text-sec);}
-    .empty span{font-size:2rem;display:block;margin-bottom:6px;}
-  </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>BABIES Gap Analyzer — Hospital Municipal La Portada</title>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#1a5276"/>
+<link rel="apple-touch-icon" href="icon-192.png"/>
+
+<!-- CDN Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+<style>
+  :root {
+    --verde:   #1a5276;
+    --verde2:  #1e8449;
+    --rojo:    #c0392b;
+    --naranja: #d35400;
+    --gris:    #f0f3f4;
+    --borde:   #aab7b8;
+    --txt:     #212529;
+    --A: #2980b9;
+    --B: #27ae60;
+    --C: #e67e22;
+    --D: #8e44ad;
+    --ant: #2471a3;
+    --int: #c0392b;
+    --pre: #1e8449;
+    --pos: #8e44ad;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #eaf0fb; color: var(--txt); font-size: 14px; }
+
+  /* HEADER */
+  header {
+    background: linear-gradient(135deg, #1a5276 0%, #1f618d 60%, #1a8a5e 100%);
+    color: #fff; padding: 14px 20px; display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 3px 10px rgba(0,0,0,.3);
+  }
+  header img { width: 52px; height: 52px; border-radius: 50%; border: 2px solid rgba(255,255,255,.4); }
+  header h1 { font-size: 1.15rem; font-weight: 700; line-height: 1.2; }
+  header p  { font-size: .78rem; opacity: .85; margin-top: 2px; }
+
+  /* TABS */
+  nav.tabs { display: flex; background: #fff; border-bottom: 3px solid var(--verde); overflow-x: auto; }
+  nav.tabs button {
+    flex: 1; min-width: 110px; padding: 11px 8px; border: none; background: transparent;
+    font-size: .82rem; font-weight: 600; color: #666; cursor: pointer; transition: all .2s;
+    border-bottom: 3px solid transparent; margin-bottom: -3px;
+  }
+  nav.tabs button.active { color: var(--verde); border-bottom-color: var(--verde); background: #eaf0fb; }
+  nav.tabs button:hover:not(.active) { background: #f7f9fb; color: var(--verde); }
+
+  /* PANELS */
+  .panel { display: none; padding: 18px; }
+  .panel.active { display: block; }
+
+  /* CARDS */
+  .card { background: #fff; border-radius: 10px; padding: 18px; margin-bottom: 18px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+  .card h2 { font-size: .95rem; color: var(--verde); border-left: 4px solid var(--verde); padding-left: 10px; margin-bottom: 14px; }
+
+  /* FORM */
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  label { font-size: .78rem; font-weight: 600; color: #555; }
+  input, select { border: 1.5px solid var(--borde); border-radius: 6px; padding: 8px 10px; font-size: .88rem; outline: none; transition: border .2s; }
+  input:focus, select:focus { border-color: var(--verde); }
+  .clasificacion-badge { display: inline-block; padding: 4px 14px; border-radius: 20px; font-weight: 700; font-size: .9rem; color: #fff; margin-top: 6px; }
+  .badge-A { background: var(--A); }
+  .badge-B { background: var(--B); }
+  .badge-C { background: var(--C); }
+  .badge-D { background: var(--D); }
+  .badge-? { background: #aaa; }
+
+  /* BUTTONS */
+  .btn { padding: 9px 18px; border: none; border-radius: 7px; font-size: .86rem; font-weight: 600; cursor: pointer; transition: all .2s; }
+  .btn-primary   { background: var(--verde);  color: #fff; }
+  .btn-primary:hover   { background: #154360; }
+  .btn-success   { background: var(--verde2); color: #fff; }
+  .btn-success:hover   { background: #196f3d; }
+  .btn-danger    { background: var(--rojo);   color: #fff; }
+  .btn-danger:hover    { background: #922b21; }
+  .btn-naranja   { background: var(--naranja); color: #fff; }
+  .btn-naranja:hover   { background: #ba4a00; }
+  .btn-sm        { padding: 5px 10px; font-size: .78rem; }
+  .btn-row       { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  th { background: var(--verde); color: #fff; padding: 9px 8px; text-align: left; white-space: nowrap; }
+  td { padding: 7px 8px; border-bottom: 1px solid #e5e8ea; vertical-align: middle; }
+  tr:hover td { background: #f0f8ff; }
+  .cell-A { color: var(--A); font-weight: 700; }
+  .cell-B { color: var(--B); font-weight: 700; }
+  .cell-C { color: var(--C); font-weight: 700; }
+  .cell-D { color: var(--D); font-weight: 700; }
+
+  /* FILTERS */
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 14px; }
+  .filters .form-group { min-width: 140px; }
+
+  /* KPI GRID */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 14px; }
+  .kpi { background: #fff; border-radius: 10px; padding: 14px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,.08); border-top: 4px solid var(--verde); }
+  .kpi.A { border-top-color: var(--A); }
+  .kpi.B { border-top-color: var(--B); }
+  .kpi.C { border-top-color: var(--C); }
+  .kpi.D { border-top-color: var(--D); }
+  .kpi-num  { font-size: 2rem; font-weight: 800; line-height: 1; }
+  .kpi-lbl  { font-size: .72rem; color: #666; margin-top: 4px; }
+  .kpi.A .kpi-num { color: var(--A); }
+  .kpi.B .kpi-num { color: var(--B); }
+  .kpi.C .kpi-num { color: var(--C); }
+  .kpi.D .kpi-num { color: var(--D); }
+
+  /* BABIES MATRIX */
+  .babies-matrix { width: 100%; border-collapse: collapse; font-size: .8rem; }
+  .babies-matrix th, .babies-matrix td { border: 1px solid #ccc; padding: 7px 6px; text-align: center; }
+  .babies-matrix th { background: var(--verde); color: #fff; }
+  .babies-matrix .row-header { background: #d6eaf8; font-weight: 700; text-align: left; }
+  .col-ant { background: #d6eaf8; }
+  .col-int { background: #fadbd8; }
+  .col-pre { background: #d5f5e3; }
+  .col-pos { background: #e8daef; }
+  .col-ant.val { font-weight: 700; color: var(--ant); }
+  .col-int.val { font-weight: 700; color: var(--int); }
+  .col-pre.val { font-weight: 700; color: var(--pre); }
+  .col-pos.val { font-weight: 700; color: var(--pos); }
+
+  /* RATES TABLE */
+  .rates-table { width: 100%; border-collapse: collapse; font-size: .84rem; }
+  .rates-table th { background: #1a5276; color: #fff; padding: 8px 10px; text-align: left; }
+  .rates-table td { padding: 7px 10px; border-bottom: 1px solid #e0e0e0; }
+  .rates-table tr:hover td { background: #f0f8ff; }
+  .rate-val { font-weight: 700; font-size: 1rem; color: var(--verde); }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55);
+    z-index: 1000; align-items: center; justify-content: center; padding: 16px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #fff; border-radius: 12px; padding: 24px; width: 100%; max-width: 600px;
+    max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,.25);
+  }
+  .modal h2 { font-size: 1.1rem; color: var(--verde); margin-bottom: 16px; border-bottom: 2px solid var(--gris); padding-bottom: 10px; }
+  .modal-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; flex-wrap: wrap; }
+
+  /* NACIDOS VIVOS PANEL */
+  .nv-panel { background: linear-gradient(135deg,#1a5276,#1e8449); color:#fff; border-radius:10px; padding:16px; margin-bottom:14px; }
+  .nv-panel h3 { font-size:.9rem; margin-bottom:10px; opacity:.9; }
+  .nv-panel .nv-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-top:10px; }
+  .nv-panel .nv-kpi { background:rgba(255,255,255,.15); border-radius:8px; padding:10px; text-align:center; }
+  .nv-panel .nv-kpi .n { font-size:1.5rem; font-weight:800; }
+  .nv-panel .nv-kpi .l { font-size:.68rem; opacity:.85; margin-top:2px; }
+
+  /* ALERT */
+  .alert { padding: 10px 14px; border-radius: 7px; margin-bottom: 12px; font-size: .84rem; }
+  .alert-info    { background: #d6eaf8; color: #1a5276; border-left: 4px solid #2980b9; }
+  .alert-success { background: #d5f5e3; color: #1e8449; border-left: 4px solid #27ae60; }
+  .alert-danger  { background: #fadbd8; color: #922b21; border-left: 4px solid #c0392b; }
+
+  /* HISTORICO */
+  .hist-table { width:100%; border-collapse:collapse; font-size:.82rem; }
+  .hist-table th { background:#1a5276; color:#fff; padding:8px 10px; }
+  .hist-table td { padding:7px 10px; border-bottom:1px solid #e0e0e0; text-align:center; }
+  .hist-table td:first-child { text-align:left; font-weight:600; }
+
+  /* STATUS BAR */
+  #statusBar { font-size:.8rem; padding:8px 18px; background:#eaf2ff; border-top:1px solid #d0dff0; color:#1a5276; min-height:30px; }
+
+  /* BRECHA */
+  .brecha-bar { height:16px; border-radius:8px; background:#e8e8e8; overflow:hidden; margin-top:4px; }
+  .brecha-fill { height:100%; border-radius:8px; transition:width .4s; }
+
+  /* Loading spinner */
+  .spinner { display:inline-block; width:18px; height:18px; border:3px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .6s linear infinite; vertical-align:middle; margin-right:6px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  @media(max-width:600px){
+    header h1 { font-size:1rem; }
+    .panel { padding:10px; }
+  }
+</style>
 </head>
 <body>
 
 <header>
-  <h1>🍼 Método BABIES</h1>
-  <p>Mortalidad Perinatal · Hospital Municipal La Portada</p>
+  <img src="icon-192.png" alt="BABIES" onerror="this.style.display='none'"/>
+  <div>
+    <h1>🍼 BABIES Gap Analyzer</h1>
+    <p>Hospital Municipal La Portada — La Paz, Bolivia</p>
+  </div>
 </header>
 
-<nav>
-  <button class="active" onclick="showTab('registrar')">✏️ Registrar</button>
+<nav class="tabs" id="tabNav">
+  <button class="active" onclick="showTab('registro')">📝 Registro</button>
   <button onclick="showTab('datos')">📋 Datos</button>
   <button onclick="showTab('analisis')">📊 Análisis</button>
   <button onclick="showTab('historico')">📅 Histórico</button>
 </nav>
 
-<main>
-
-<!-- ═══════════════ TAB 1: REGISTRAR ═══════════════ -->
-<div id="tab-registrar" class="tab-panel active">
+<!-- ═══════════════ TAB REGISTRO ═══════════════ -->
+<div class="panel active" id="tab-registro">
   <div class="card">
-    <div class="card-title">✏️ Registrar Nuevo Caso</div>
-
-    <div class="form-row">
+    <h2>Registrar Caso Perinatal</h2>
+    <div class="form-grid">
       <div class="form-group">
-        <label>Fecha del evento</label>
-        <input type="date" id="inp-fecha" />
+        <label>Fecha del Evento *</label>
+        <input type="date" id="r_fecha"/>
       </div>
       <div class="form-group">
-        <label>Gestión (año)</label>
-        <select id="inp-anio"></select>
+        <label>Establecimiento</label>
+        <input type="text" id="r_estab" placeholder="Ej: Hospital La Portada"/>
       </div>
-    </div>
-
-    <div class="form-group">
-      <label>Establecimiento de salud</label>
-      <input type="text" id="inp-estab" value="Hospital Municipal La Portada" />
-    </div>
-
-    <div class="form-row">
       <div class="form-group">
         <label>Red / Municipio</label>
-        <input type="text" id="inp-red" value="La Paz" />
+        <input type="text" id="r_red" placeholder="Ej: Red 4"/>
       </div>
       <div class="form-group">
         <label>Distrito</label>
-        <input type="text" id="inp-distrito" value="La Paz" />
+        <input type="text" id="r_dist" placeholder="Ej: Distrito 6"/>
+      </div>
+      <div class="form-group">
+        <label>Peso al Nacer (gramos) *</label>
+        <input type="number" id="r_peso" min="300" max="6000" placeholder="Ej: 2800"/>
+      </div>
+      <div class="form-group">
+        <label>Tipo de Muerte *</label>
+        <select id="r_tipo">
+          <option value="">— Seleccionar —</option>
+          <option>Fetal</option>
+          <option>Neonatal</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Momento de la Muerte *</label>
+        <select id="r_momento">
+          <option value="">— Seleccionar —</option>
+          <option>Anteparto</option>
+          <option>Intraparto</option>
+          <option>Prealta</option>
+          <option>Postalta</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Año</label>
+        <input type="number" id="r_año" min="2000" max="2099"/>
       </div>
     </div>
+    <div style="margin-top:14px">
+      <label style="font-size:.78rem;font-weight:600;color:#555">Clasificación BABIES calculada:</label><br/>
+      <span class="clasificacion-badge badge-?" id="r_clasif_badge">Pendiente</span>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="registrarCaso()">💾 Guardar Caso</button>
+      <button class="btn" style="background:#eee;color:#333" onclick="limpiarFormRegistro()">🗑 Limpiar</button>
+    </div>
+  </div>
 
-    <hr class="div" />
+  <div class="card">
+    <h2>ℹ️ Lógica Método BABIES</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">
+      <div style="border-radius:8px;padding:10px;background:#d6eaf8;border-left:4px solid var(--A)">
+        <b style="color:var(--A)">Celda A — Salud Materna</b><br/>
+        <small>≥ 2500 g + Fetal</small>
+      </div>
+      <div style="border-radius:8px;padding:10px;background:#d5f5e3;border-left:4px solid var(--B)">
+        <b style="color:var(--B)">Celda B — Cuidado del Parto</b><br/>
+        <small>≥ 2500 g + Neonatal</small>
+      </div>
+      <div style="border-radius:8px;padding:10px;background:#fdebd0;border-left:4px solid var(--C)">
+        <b style="color:var(--C)">Celda C — Cuidado del Embarazo</b><br/>
+        <small>&lt; 2500 g + Fetal</small>
+      </div>
+      <div style="border-radius:8px;padding:10px;background:#e8daef;border-left:4px solid var(--D)">
+        <b style="color:var(--D)">Celda D — Cuidado del RN</b><br/>
+        <small>&lt; 2500 g + Neonatal</small>
+      </div>
+    </div>
+  </div>
+</div>
 
-    <div class="form-row">
+<!-- ═══════════════ TAB DATOS ═══════════════ -->
+<div class="panel" id="tab-datos">
+
+  <!-- Nacidos Vivos -->
+  <div class="card">
+    <h2>👶 Nacidos Vivos del Período</h2>
+    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+      <div class="form-group" style="min-width:180px">
+        <label>Año de referencia</label>
+        <select id="nv_año" onchange="actualizarPanelNV()">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <div class="form-group" style="min-width:180px">
+        <label>Nacidos Vivos (NV)</label>
+        <input type="number" id="nv_valor" min="0" placeholder="Ej: 420" oninput="actualizarPanelNV()"/>
+      </div>
+    </div>
+    <div id="panelNV" style="display:none;margin-top:12px"></div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="card">
+    <h2>Filtros</h2>
+    <div class="filters">
       <div class="form-group">
-        <label>Peso al nacer (g)</label>
-        <input type="number" id="inp-peso" min="300" max="6000" value="3000" oninput="previsualizar()" />
+        <label>Año</label>
+        <select id="f_año" onchange="aplicarFiltros()">
+          <option value="">Todos</option>
+        </select>
       </div>
       <div class="form-group">
-        <label>Tipo de muerte</label>
-        <select id="inp-tipo" onchange="previsualizar()">
-          <option value="Fetal">Fetal</option>
-          <option value="Neonatal">Neonatal</option>
+        <label>Distrito</label>
+        <select id="f_dist" onchange="aplicarFiltros()">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Celda BABIES</label>
+        <select id="f_celda" onchange="aplicarFiltros()">
+          <option value="">Todas</option>
+          <option>A</option><option>B</option><option>C</option><option>D</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Tipo Muerte</label>
+        <select id="f_tipo" onchange="aplicarFiltros()">
+          <option value="">Todos</option>
+          <option>Fetal</option>
+          <option>Neonatal</option>
         </select>
       </div>
     </div>
-
-    <div class="form-group">
-      <label>Momento de muerte</label>
-      <select id="inp-momento">
-        <option value="Anteparto">Anteparto (durante el embarazo)</option>
-        <option value="Intraparto">Intraparto (durante el parto)</option>
-        <option value="Prealta">Prealta (0–6 días, hospitalizado)</option>
-        <option value="Postalta">Postalta (7–27 días)</option>
-      </select>
-    </div>
-
-    <div id="badge" class="badge-preview"></div>
-
-    <button class="btn btn-primary" id="btn-save" onclick="guardar()">
-      💾 Guardar Caso
-    </button>
+    <div id="contadorFiltro" class="alert alert-info" style="display:none"></div>
   </div>
 
+  <!-- Tabla -->
   <div class="card">
-    <div class="card-title">📖 Referencia: Celdas BABIES</div>
-    <div class="matrix">
-      <div class="matrix-cell mc-A"><div class="mc-letter">A</div><div class="mc-name">Salud Materna</div><div style="font-size:.74rem">≥ 2500 g + Fetal</div></div>
-      <div class="matrix-cell mc-B"><div class="mc-letter">B</div><div class="mc-name">Cuidado durante el Parto</div><div style="font-size:.74rem">≥ 2500 g + Neonatal</div></div>
-      <div class="matrix-cell mc-C"><div class="mc-letter">C</div><div class="mc-name">Cuidado durante el Embarazo</div><div style="font-size:.74rem">&lt; 2500 g + Fetal</div></div>
-      <div class="matrix-cell mc-D"><div class="mc-letter">D</div><div class="mc-name">Cuidado del Recién Nacido</div><div style="font-size:.74rem">&lt; 2500 g + Neonatal</div></div>
+    <h2>Casos Registrados</h2>
+    <div class="btn-row" style="margin-bottom:12px">
+      <button class="btn btn-success" onclick="exportarExcel()">📥 Exportar Excel</button>
+      <button class="btn btn-danger"  onclick="exportarPDF()">🖨 Exportar PDF Oficial</button>
+      <button class="btn" style="background:#eee;color:#333" onclick="cargarCasos()">🔄 Actualizar</button>
+    </div>
+    <div class="table-wrap" id="tablaContenedor">
+      <div class="alert alert-info">Cargando datos...</div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════ TAB 2: DATOS ═══════════════ -->
-<div id="tab-datos" class="tab-panel">
+<!-- ═══════════════ TAB ANÁLISIS ═══════════════ -->
+<div class="panel" id="tab-analisis">
   <div class="card">
-    <div class="card-title">📋 Base de Datos</div>
+    <h2>Filtro de Análisis</h2>
     <div class="filters">
-      <select id="fil-anio" onchange="filtrar()"><option value="">Todos los años</option></select>
-      <select id="fil-dist" onchange="filtrar()"><option value="">Todos los distritos</option></select>
-      <select id="fil-cel" onchange="filtrar()">
-        <option value="">Todas las celdas</option>
-        <option>A</option><option>B</option><option>C</option><option>D</option>
-      </select>
+      <div class="form-group">
+        <label>Año</label>
+        <select id="a_año" onchange="renderAnalisis()">
+          <option value="">Todos</option>
+        </select>
+      </div>
     </div>
-    <div class="stats-grid">
-      <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value" id="st-tot">—</div></div>
-      <div class="stat-card"><div class="stat-label">Celda A</div><div class="stat-value" id="st-a">—</div></div>
-      <div class="stat-card"><div class="stat-label">Celda B</div><div class="stat-value" id="st-b">—</div></div>
-      <div class="stat-card"><div class="stat-label">Celda C+D</div><div class="stat-value" id="st-cd">—</div></div>
-    </div>
-    <div class="table-wrap" id="tabla-wrap"><div class="empty"><span>⏳</span>Cargando...</div></div>
-    <button class="btn btn-excel" onclick="exportarExcel()">📥 Exportar Excel (5 hojas)</button>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <!-- Matriz BABIES oficial 5 grupos -->
+  <div class="card">
+    <h2>Matriz BABIES Oficial — 5 Grupos de Peso × 4 Momentos</h2>
+    <div class="table-wrap" id="matrizBabies"></div>
+  </div>
+
+  <!-- Brecha de oportunidad -->
+  <div class="card">
+    <h2>Brecha de Oportunidad por Celda</h2>
+    <div id="brechaDiv"></div>
   </div>
 </div>
 
-<!-- ═══════════════ TAB 3: ANÁLISIS ═══════════════ -->
-<div id="tab-analisis" class="tab-panel">
+<!-- ═══════════════ TAB HISTÓRICO ═══════════════ -->
+<div class="panel" id="tab-historico">
   <div class="card">
-    <div class="card-title">📊 Brecha de Oportunidad</div>
-    <div class="info-box">Compara un establecimiento con un <strong>estándar de referencia</strong> para detectar áreas prioritarias de intervención.</div>
-
-    <div class="form-group"><label>Establecimiento a analizar</label><select id="an-d1" onchange="calcAnalisis()"></select></div>
-    <div class="form-group"><label>Nacidos vivos – Analizado</label><input type="number" id="an-n1" value="1000" min="1" oninput="calcAnalisis()" /></div>
-    <hr class="div" />
-    <div class="form-group"><label>Establecimiento estándar</label><select id="an-d2" onchange="calcAnalisis()"></select></div>
-    <div class="form-group"><label>Nacidos vivos – Estándar</label><input type="number" id="an-n2" value="1000" min="1" oninput="calcAnalisis()" /></div>
-    <div class="form-group"><label>Filtrar por año</label><select id="an-año" onchange="calcAnalisis()"><option value="">Todos los años</option></select></div>
-
-    <div id="res-analisis" style="display:none">
-      <hr class="div" />
-      <div class="card-title" style="font-size:.87rem">Tasas × 1 000 nacidos vivos</div>
-      <div class="matrix" id="mat-analisis"></div>
-      <canvas id="chart-brecha"></canvas>
-    </div>
+    <h2>Histórico por Gestión (año)</h2>
+    <div class="table-wrap" id="histGestion"></div>
   </div>
-
   <div class="card">
-    <div class="card-title">🎯 Indicadores por Área</div>
-    <div class="filters">
-      <select id="ind-año" onchange="renderInd()"><option value="">Todos los años</option></select>
-      <select id="ind-dist" onchange="renderInd()"><option value="">Todos los distritos</option></select>
-    </div>
-    <div id="div-ind"><div class="empty"><span>📊</span>Cargando...</div></div>
+    <h2>Distribución por Mes</h2>
+    <div class="table-wrap" id="histMes"></div>
+  </div>
+  <div class="card">
+    <h2>Distribución por Momento de Muerte</h2>
+    <div class="table-wrap" id="histMomento"></div>
   </div>
 </div>
 
-<!-- ═══════════════ TAB 4: HISTÓRICO ═══════════════ -->
-<div id="tab-historico" class="tab-panel">
-  <div class="card">
-    <div class="card-title">📅 Casos por Gestión</div>
-    <div class="filters">
-      <select id="hist-dist" onchange="renderHist()"><option value="">Todos los distritos</option></select>
+<!-- ═══════════════ STATUS BAR ═══════════════ -->
+<div id="statusBar">⏳ Iniciando aplicación…</div>
+
+<!-- ═══════════════ MODAL EDITAR ═══════════════ -->
+<div class="modal-overlay" id="modalEditar">
+  <div class="modal">
+    <h2>✏️ Editar Caso</h2>
+    <input type="hidden" id="e_id"/>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Fecha del Evento *</label>
+        <input type="date" id="e_fecha"/>
+      </div>
+      <div class="form-group">
+        <label>Establecimiento</label>
+        <input type="text" id="e_estab"/>
+      </div>
+      <div class="form-group">
+        <label>Red / Municipio</label>
+        <input type="text" id="e_red"/>
+      </div>
+      <div class="form-group">
+        <label>Distrito</label>
+        <input type="text" id="e_dist"/>
+      </div>
+      <div class="form-group">
+        <label>Peso (g) *</label>
+        <input type="number" id="e_peso" min="300" max="6000"/>
+      </div>
+      <div class="form-group">
+        <label>Tipo de Muerte *</label>
+        <select id="e_tipo">
+          <option>Fetal</option>
+          <option>Neonatal</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Momento *</label>
+        <select id="e_momento">
+          <option>Anteparto</option>
+          <option>Intraparto</option>
+          <option>Prealta</option>
+          <option>Postalta</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Año</label>
+        <input type="number" id="e_año" min="2000" max="2099"/>
+      </div>
     </div>
-    <canvas id="chart-hist" style="max-height:200px"></canvas>
-  </div>
-  <div class="card">
-    <div class="card-title">📅 Casos por Mes (año actual)</div>
-    <div id="div-mensual"></div>
-  </div>
-  <div class="card">
-    <div class="card-title">⏱️ Distribución por Momento de Muerte</div>
-    <canvas id="chart-mom" style="max-height:200px"></canvas>
+    <div class="modal-btns">
+      <button class="btn" style="background:#eee;color:#333" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarEdicion()">💾 Guardar Cambios</button>
+    </div>
   </div>
 </div>
 
-</main>
-<div id="toast"></div>
+<!-- ═══════════════ MODAL CONFIRMAR ELIMINAR ═══════════════ -->
+<div class="modal-overlay" id="modalEliminar">
+  <div class="modal" style="max-width:380px">
+    <h2>🗑 Confirmar Eliminación</h2>
+    <p style="margin-bottom:14px;color:#666">¿Está seguro de eliminar este caso? Esta acción no se puede deshacer.</p>
+    <input type="hidden" id="del_id"/>
+    <div class="modal-btns">
+      <button class="btn" style="background:#eee;color:#333" onclick="cerrarModalEliminar()">Cancelar</button>
+      <button class="btn btn-danger" onclick="confirmarEliminar()">🗑 Eliminar</button>
+    </div>
+  </div>
+</div>
 
-<!-- ══════════════════════════════════════════════════════════
-     ÚNICO BLOQUE SCRIPT — no agregar más <script> aquí dentro
-     ══════════════════════════════════════════════════════════ -->
 <script>
-// ══════════════════════════════════════════
-//  CONFIG
-// ══════════════════════════════════════════
-const { createClient } = supabase;
-const db = createClient(
-  'https://ocmjkntwnkyoggjgshah.supabase.co',
-  'sb_publishable_LUI7t1qJUdU86VE_cxYo7w_7xlkCfVi'
-);
-const AREAS = {
-  A: 'Salud Materna',
-  B: 'Cuidado durante el Parto',
-  C: 'Cuidado durante el Embarazo',
-  D: 'Cuidado del Recién Nacido'
-};
+// ═══════════════════════════════════════════════
+//  CONFIGURACIÓN SUPABASE
+// ═══════════════════════════════════════════════
+const SUPA_URL = 'https://ocmjkntwnkyoggjgshah.supabase.co';
+const SUPA_KEY = 'sb_publishable_LUI7t1qJUdU86VE_cxYo7w_7xlkCfVi';
+const TABLA   = 'casos_perinatales';
 
-let todos = [];
-let cBrecha = null, cHist = null, cMom = null;
+// ═══════════════════════════════════════════════
+//  ESTADO GLOBAL
+// ═══════════════════════════════════════════════
+let todos = [];          // todos los casos cargados
+let filtrados = [];      // casos después de filtros
 
-// ══════════════════════════════════════════
-//  INIT
-// ══════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', async () => {
-  document.getElementById('inp-fecha').value = new Date().toISOString().slice(0, 10);
-  const año = new Date().getFullYear();
-  ['inp-anio', 'fil-anio', 'an-año', 'ind-año'].forEach(id => {
-    const el = document.getElementById(id);
-    if (id !== 'inp-anio') el.innerHTML = '<option value="">Todos los años</option>';
-    for (let a = año; a >= año - 10; a--) el.innerHTML += `<option value="${a}">${a}</option>`;
+// ═══════════════════════════════════════════════
+//  HELPERS SUPABASE
+// ═══════════════════════════════════════════════
+async function supaFetch(path, options = {}) {
+  const url = SUPA_URL + '/rest/v1/' + path;
+  const headers = {
+    'apikey': SUPA_KEY,
+    'Authorization': 'Bearer ' + SUPA_KEY,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation',
+    ...options.headers
+  };
+  const res = await fetch(url, { ...options, headers });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error('Supabase error ' + res.status + ': ' + err);
+  }
+  if (res.status === 204) return [];
+  return res.json();
+}
+
+// ═══════════════════════════════════════════════
+//  LÓGICA BABIES
+// ═══════════════════════════════════════════════
+function clasificar(peso, tipo) {
+  if (!peso || !tipo) return '';
+  const p = parseInt(peso);
+  if (tipo === 'Fetal')    return p >= 2500 ? 'A' : 'C';
+  if (tipo === 'Neonatal') return p >= 2500 ? 'B' : 'D';
+  return '';
+}
+
+function areaBabies(clasif) {
+  const areas = {
+    A: 'Salud Materna',
+    B: 'Cuidado durante el Parto',
+    C: 'Cuidado durante el Embarazo',
+    D: 'Cuidado del Recién Nacido'
+  };
+  return areas[clasif] || '';
+}
+
+function grupoPeso(p) {
+  const peso = parseInt(p);
+  if (peso < 1000)  return '< 1000 g';
+  if (peso < 1500)  return '1000–1499 g';
+  if (peso < 2500)  return '1500–2499 g';
+  if (peso < 4000)  return '2500–3999 g';
+  return '4000+ g';
+}
+
+const GRUPOS_PESO = ['< 1000 g', '1000–1499 g', '1500–2499 g', '2500–3999 g', '4000+ g'];
+const MOMENTOS    = ['Anteparto', 'Intraparto', 'Prealta', 'Postalta'];
+const COL_CLASSES = { Anteparto:'ant', Intraparto:'int', Prealta:'pre', Postalta:'pos' };
+
+// ═══════════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════════
+function showTab(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav.tabs button').forEach((b,i) => {
+    const tabs = ['registro','datos','analisis','historico'];
+    b.classList.toggle('active', tabs[i] === id);
   });
-  previsualizar();
-  await cargar();
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  document.getElementById('tab-' + id).classList.add('active');
+  if (id === 'analisis') renderAnalisis();
+  if (id === 'historico') renderHistorico();
+}
+
+// ═══════════════════════════════════════════════
+//  STATUS
+// ═══════════════════════════════════════════════
+function setStatus(msg, tipo = 'info') {
+  const bar = document.getElementById('statusBar');
+  const colores = { info:'#1a5276', ok:'#1e8449', error:'#c0392b', warn:'#d35400' };
+  bar.textContent = msg;
+  bar.style.color = colores[tipo] || colores.info;
+}
+
+// ═══════════════════════════════════════════════
+//  CARGAR CASOS
+// ═══════════════════════════════════════════════
+async function cargarCasos() {
+  setStatus('⏳ Cargando casos desde Supabase…');
+  document.getElementById('tablaContenedor').innerHTML = '<div class="alert alert-info">Cargando…</div>';
+  try {
+    const data = await supaFetch(TABLA + '?order=fecha_evento.desc&select=*');
+    todos = data;
+    populateSelectores();
+    aplicarFiltros();
+    renderAnalisis();
+    renderHistorico();
+    setStatus('✅ ' + todos.length + ' casos cargados — ' + new Date().toLocaleTimeString('es-BO'), 'ok');
+  } catch(e) {
+    setStatus('❌ Error al cargar: ' + e.message, 'error');
+    document.getElementById('tablaContenedor').innerHTML =
+      '<div class="alert alert-danger">Error al conectar con Supabase: ' + e.message + '</div>';
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  SELECTORES (años, distritos)
+// ═══════════════════════════════════════════════
+function populateSelectores() {
+  const años = [...new Set(todos.map(c => c.año).filter(Boolean))].sort((a,b) => b-a);
+  const distritos = [...new Set(todos.map(c => c.distrito).filter(Boolean))].sort();
+
+  ['f_año','a_año','nv_año'].forEach(id => {
+    const sel = document.getElementById(id);
+    const val = sel.value;
+    sel.innerHTML = '<option value="">Todos</option>';
+    años.forEach(a => sel.innerHTML += '<option value="'+a+'">'+a+'</option>');
+    sel.value = val;
+  });
+
+  const fd = document.getElementById('f_dist');
+  const vd = fd.value;
+  fd.innerHTML = '<option value="">Todos</option>';
+  distritos.forEach(d => fd.innerHTML += '<option value="'+d+'">'+d+'</option>');
+  fd.value = vd;
+}
+
+// ═══════════════════════════════════════════════
+//  FILTROS Y TABLA
+// ═══════════════════════════════════════════════
+function aplicarFiltros() {
+  const año   = document.getElementById('f_año').value;
+  const dist  = document.getElementById('f_dist').value;
+  const celda = document.getElementById('f_celda').value;
+  const tipo  = document.getElementById('f_tipo').value;
+
+  filtrados = todos.filter(c => {
+    if (año   && String(c.año)         !== año)   return false;
+    if (dist  && c.distrito            !== dist)  return false;
+    if (celda && c.clasificacion       !== celda) return false;
+    if (tipo  && c.tipo_muerte         !== tipo)  return false;
+    return true;
+  });
+
+  const cont = document.getElementById('contadorFiltro');
+  if (filtrados.length !== todos.length) {
+    cont.style.display = 'block';
+    cont.textContent = 'Mostrando ' + filtrados.length + ' de ' + todos.length + ' casos con los filtros aplicados.';
+  } else {
+    cont.style.display = 'none';
+  }
+
+  renderTabla();
+}
+
+function renderTabla() {
+  const cont = document.getElementById('tablaContenedor');
+  if (!filtrados.length) {
+    cont.innerHTML = '<div class="alert alert-info">No hay casos que coincidan con los filtros.</div>';
+    return;
+  }
+  let html = `<table>
+    <thead><tr>
+      <th>Fecha</th><th>Establecimiento</th><th>Distrito</th>
+      <th>Peso (g)</th><th>Grupo Peso</th><th>Tipo</th><th>Momento</th>
+      <th>Año</th><th>Celda</th><th>Área BABIES</th><th>Acciones</th>
+    </tr></thead><tbody>`;
+  filtrados.forEach(c => {
+    const cl = c.clasificacion || '';
+    html += `<tr>
+      <td>${c.fecha_evento || ''}</td>
+      <td>${c.establecimiento || ''}</td>
+      <td>${c.distrito || ''}</td>
+      <td>${c.peso || ''}</td>
+      <td>${c.peso ? grupoPeso(c.peso) : ''}</td>
+      <td>${c.tipo_muerte || ''}</td>
+      <td>${c.momento_muerte || ''}</td>
+      <td>${c.año || ''}</td>
+      <td class="cell-${cl}">${cl}</td>
+      <td>${areaBabies(cl)}</td>
+      <td>
+        <button class="btn btn-sm btn-primary" onclick="abrirEditar(${c.id})">✏️</button>
+        <button class="btn btn-sm btn-danger"  onclick="abrirEliminar(${c.id})" style="margin-left:4px">🗑</button>
+      </td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  cont.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════
+//  REGISTRO
+// ═══════════════════════════════════════════════
+// Auto-calcular clasificación mientras se escribe
+function actualizarClasifBadge() {
+  const peso  = document.getElementById('r_peso').value;
+  const tipo  = document.getElementById('r_tipo').value;
+  const cl    = clasificar(peso, tipo);
+  const badge = document.getElementById('r_clasif_badge');
+  badge.textContent = cl ? (cl + ' — ' + areaBabies(cl)) : 'Pendiente';
+  badge.className   = 'clasificacion-badge badge-' + (cl || '?');
+}
+document.getElementById('r_peso').addEventListener('input',  actualizarClasifBadge);
+document.getElementById('r_tipo').addEventListener('change', actualizarClasifBadge);
+
+function limpiarFormRegistro() {
+  ['r_fecha','r_estab','r_red','r_dist','r_peso','r_tipo','r_momento'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('r_año').value = new Date().getFullYear();
+  actualizarClasifBadge();
+}
+
+async function registrarCaso() {
+  const fecha   = document.getElementById('r_fecha').value;
+  const estab   = document.getElementById('r_estab').value.trim();
+  const red     = document.getElementById('r_red').value.trim();
+  const dist    = document.getElementById('r_dist').value.trim();
+  const peso    = parseInt(document.getElementById('r_peso').value);
+  const tipo    = document.getElementById('r_tipo').value;
+  const momento = document.getElementById('r_momento').value;
+  const año     = parseInt(document.getElementById('r_año').value);
+
+  if (!fecha || !peso || !tipo || !momento) {
+    setStatus('⚠️ Completar: Fecha, Peso, Tipo de Muerte y Momento.', 'warn');
+    return;
+  }
+
+  const clasif    = clasificar(peso, tipo);
+  const area      = areaBabies(clasif);
+  const payload   = {
+    fecha_evento: fecha,
+    establecimiento: estab || 'Hospital Municipal La Portada',
+    red_municipio: red,
+    peso,
+    tipo_muerte: tipo,
+    momento_muerte: momento,
+    distrito: dist,
+    año: año || new Date().getFullYear(),
+    clasificacion: clasif,
+    area_babies: area,
+    fecha_registro: new Date().toISOString()
+  };
+
+  setStatus('⏳ Guardando caso…');
+  try {
+    await supaFetch(TABLA, { method: 'POST', body: JSON.stringify(payload) });
+    setStatus('✅ Caso registrado correctamente (Celda ' + clasif + ')', 'ok');
+    limpiarFormRegistro();
+    await cargarCasos();
+  } catch(e) {
+    setStatus('❌ Error al guardar: ' + e.message, 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  EDITAR
+// ═══════════════════════════════════════════════
+function abrirEditar(id) {
+  const c = todos.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('e_id').value      = c.id;
+  document.getElementById('e_fecha').value   = c.fecha_evento || '';
+  document.getElementById('e_estab').value   = c.establecimiento || '';
+  document.getElementById('e_red').value     = c.red_municipio || '';
+  document.getElementById('e_dist').value    = c.distrito || '';
+  document.getElementById('e_peso').value    = c.peso || '';
+  document.getElementById('e_tipo').value    = c.tipo_muerte || 'Fetal';
+  document.getElementById('e_momento').value = c.momento_muerte || 'Anteparto';
+  document.getElementById('e_año').value     = c.año || new Date().getFullYear();
+  document.getElementById('modalEditar').classList.add('open');
+}
+
+function cerrarModal() {
+  document.getElementById('modalEditar').classList.remove('open');
+}
+
+async function guardarEdicion() {
+  const id      = parseInt(document.getElementById('e_id').value);
+  const peso    = parseInt(document.getElementById('e_peso').value);
+  const tipo    = document.getElementById('e_tipo').value;
+  const momento = document.getElementById('e_momento').value;
+  const clasif  = clasificar(peso, tipo);
+
+  const payload = {
+    fecha_evento:   document.getElementById('e_fecha').value,
+    establecimiento:document.getElementById('e_estab').value.trim(),
+    red_municipio:  document.getElementById('e_red').value.trim(),
+    distrito:       document.getElementById('e_dist').value.trim(),
+    peso, tipo_muerte: tipo, momento_muerte: momento,
+    año:            parseInt(document.getElementById('e_año').value),
+    clasificacion:  clasif,
+    area_babies:    areaBabies(clasif)
+  };
+
+  setStatus('⏳ Actualizando caso…');
+  try {
+    await supaFetch(TABLA + '?id=eq.' + id, { method: 'PATCH', body: JSON.stringify(payload) });
+    setStatus('✅ Caso actualizado correctamente', 'ok');
+    cerrarModal();
+    await cargarCasos();
+  } catch(e) {
+    setStatus('❌ Error al actualizar: ' + e.message, 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  ELIMINAR
+// ═══════════════════════════════════════════════
+function abrirEliminar(id) {
+  document.getElementById('del_id').value = id;
+  document.getElementById('modalEliminar').classList.add('open');
+}
+
+function cerrarModalEliminar() {
+  document.getElementById('modalEliminar').classList.remove('open');
+}
+
+async function confirmarEliminar() {
+  const id = parseInt(document.getElementById('del_id').value);
+  setStatus('⏳ Eliminando caso…');
+  try {
+    await supaFetch(TABLA + '?id=eq.' + id, { method: 'DELETE' });
+    setStatus('✅ Caso eliminado correctamente', 'ok');
+    cerrarModalEliminar();
+    await cargarCasos();
+  } catch(e) {
+    setStatus('❌ Error al eliminar: ' + e.message, 'error');
+  }
+}
+
+// Cerrar modales haciendo clic fuera
+document.getElementById('modalEditar').addEventListener('click', function(e) {
+  if (e.target === this) cerrarModal();
+});
+document.getElementById('modalEliminar').addEventListener('click', function(e) {
+  if (e.target === this) cerrarModalEliminar();
 });
 
-// ══════════════════════════════════════════
-//  CLASIFICACIÓN
-// ══════════════════════════════════════════
-function clasif(peso, tipo) {
-  const p = parseInt(peso);
-  if (!p || p < 300) return null;
-  if (p >= 2500 && tipo === 'Fetal')    return 'A';
-  if (p >= 2500 && tipo === 'Neonatal') return 'B';
-  if (p < 2500  && tipo === 'Fetal')    return 'C';
-  if (p < 2500  && tipo === 'Neonatal') return 'D';
-  return null;
+// ═══════════════════════════════════════════════
+//  NACIDOS VIVOS
+// ═══════════════════════════════════════════════
+function actualizarPanelNV() {
+  const nv = parseInt(document.getElementById('nv_valor').value);
+  const añoNV = document.getElementById('nv_año').value;
+  const panel = document.getElementById('panelNV');
+
+  if (!nv || nv <= 0) { panel.style.display = 'none'; return; }
+
+  const base = añoNV
+    ? todos.filter(c => String(c.año) === añoNV)
+    : todos;
+
+  const MP   = base.filter(c => c.tipo_muerte === 'Fetal').length;
+  const MN   = base.filter(c => c.tipo_muerte === 'Neonatal').length;
+  const MNP  = base.filter(c => c.tipo_muerte === 'Neonatal' && c.momento_muerte === 'Prealta').length;
+  const MNT  = base.filter(c => c.tipo_muerte === 'Neonatal' && c.momento_muerte === 'Postalta').length;
+  const total= base.length;
+
+  const fmt = (n, d) => d > 0 ? ((n / d) * 1000).toFixed(1) : '—';
+
+  panel.style.display = 'block';
+  panel.innerHTML = `<div class="nv-panel">
+    <h3>📊 Tasas por 1000 Nacidos Vivos (NV = ${nv.toLocaleString('es-BO')}, ${añoNV || 'todos los años'})</h3>
+    <div class="nv-grid">
+      <div class="nv-kpi"><div class="n">${fmt(MP, nv)}</div><div class="l">Tasa Mort. Fetal</div></div>
+      <div class="nv-kpi"><div class="n">${fmt(MN, nv)}</div><div class="l">Tasa Mort. Neonatal</div></div>
+      <div class="nv-kpi"><div class="n">${fmt(MNP, nv)}</div><div class="l">Mort. Neonatal Institucional (Prealta)</div></div>
+      <div class="nv-kpi"><div class="n">${fmt(MNT, nv)}</div><div class="l">Mort. Neonatal Tardía (Postalta)</div></div>
+      <div class="nv-kpi"><div class="n">${fmt(total, nv)}</div><div class="l">Tasa Perinatal Total</div></div>
+    </div>
+  </div>`;
 }
 
-function previsualizar() {
-  const c = clasif(document.getElementById('inp-peso').value, document.getElementById('inp-tipo').value);
-  const div = document.getElementById('badge');
-  if (!c) { div.style.display = 'none'; return; }
-  div.style.display = 'block';
-  div.className = `badge-preview badge-${c}`;
-  div.textContent = `Celda ${c} – ${AREAS[c]}`;
-}
-
-// ══════════════════════════════════════════
-//  GUARDAR
-// ══════════════════════════════════════════
-async function guardar() {
-  const peso    = parseInt(document.getElementById('inp-peso').value);
-  const tipo    = document.getElementById('inp-tipo').value;
-  const distri  = document.getElementById('inp-distrito').value.trim();
-  const estab   = document.getElementById('inp-estab').value.trim();
-  const red     = document.getElementById('inp-red').value.trim();
-  const fecha   = document.getElementById('inp-fecha').value;
-  const año     = parseInt(document.getElementById('inp-anio').value);
-  const momento = document.getElementById('inp-momento').value;
-
-  if (!peso || peso < 300 || peso > 6000) { toast('⚠️ Peso inválido (300–6000 g)', true); return; }
-  if (!distri) { toast('⚠️ Ingresa el distrito', true); return; }
-
-  const clasificacion = clasif(peso, tipo);
-  const area_babies   = AREAS[clasificacion];
-
-  const btn = document.getElementById('btn-save');
-  btn.innerHTML = '<span class="spinner"></span> Guardando...';
-  btn.disabled = true;
-
-  const { error } = await db.from('casos_perinatales').insert([{
-    fecha_evento: fecha || null, año,
-    establecimiento: estab, red_municipio: red, distrito: distri,
-    peso, tipo_muerte: tipo, momento_muerte: momento,
-    clasificacion, area_babies,
-    fecha_registro: new Date().toISOString()
-  }]);
-
-  btn.innerHTML = '💾 Guardar Caso'; btn.disabled = false;
-  if (error) { console.error(error); toast('❌ ' + error.message, true); }
-  else { toast('✅ Caso guardado'); await cargar(); }
-}
-
-// ══════════════════════════════════════════
-//  CARGAR
-// ══════════════════════════════════════════
-async function cargar() {
-  const { data, error } = await db.from('casos_perinatales').select('*').order('fecha_registro', { ascending: false });
-  if (error) { console.error(error); return; }
-  todos = data || [];
-  syncFiltros();
-  filtrar();
-  calcAnalisis();
-  renderInd();
-  renderHist();
-}
-
-// ══════════════════════════════════════════
-//  FILTROS
-// ══════════════════════════════════════════
-function syncFiltros() {
-  const dists = [...new Set(todos.map(c => c.distrito).filter(Boolean))].sort();
-  ['fil-dist', 'an-d1', 'an-d2', 'ind-dist', 'hist-dist'].forEach(id => {
-    const el = document.getElementById(id);
-    const val = el.value;
-    const placeholder = (id === 'an-d1' || id === 'an-d2') ? '' : 'Todos los distritos';
-    el.innerHTML = placeholder ? `<option value="">${placeholder}</option>` : '';
-    dists.forEach(d => el.innerHTML += `<option value="${d}">${d}</option>`);
-    if (val) el.value = val;
-  });
-}
-
-function getFiltered(aId, dId, cId) {
-  const a = document.getElementById(aId)?.value || '';
-  const d = document.getElementById(dId)?.value || '';
-  const c = document.getElementById(cId)?.value || '';
-  return todos.filter(x => {
-    if (a && String(x.año) !== a)   return false;
-    if (d && x.distrito !== d)      return false;
-    if (c && x.clasificacion !== c) return false;
-    return true;
-  });
-}
-
-function filtrar() {
-  const datos = getFiltered('fil-anio', 'fil-dist', 'fil-cel');
-  renderTabla(datos);
-  document.getElementById('st-tot').textContent = datos.length;
-  document.getElementById('st-a').textContent   = datos.filter(c => c.clasificacion === 'A').length;
-  document.getElementById('st-b').textContent   = datos.filter(c => c.clasificacion === 'B').length;
-  document.getElementById('st-cd').textContent  = datos.filter(c => 'CD'.includes(c.clasificacion)).length;
-}
-
-function renderTabla(datos) {
-  const wrap = document.getElementById('tabla-wrap');
-  if (!datos.length) { wrap.innerHTML = '<div class="empty"><span>📭</span>Sin casos</div>'; return; }
-  let h = `<table><thead><tr><th>Fecha</th><th>Establecimiento</th><th>Distrito</th><th>Peso</th><th>Tipo</th><th>Momento</th><th>Año</th><th>Celda</th><th></th></tr></thead><tbody>`;
-  datos.forEach(c => {
-    const f = c.fecha_evento
-      ? new Date(c.fecha_evento + 'T12:00:00').toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: '2-digit' })
-      : (c.fecha_registro ? new Date(c.fecha_registro).toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—');
-    h += `<tr><td>${f}</td><td>${c.establecimiento || '—'}</td><td>${c.distrito || '—'}</td><td>${c.peso}g</td><td>${c.tipo_muerte}</td><td>${c.momento_muerte || '—'}</td><td>${c.año}</td><td><span class="cel cel-${c.clasificacion}">${c.clasificacion}</span></td><td><button class="btn-del" onclick="eliminar(${c.id})">🗑</button></td></tr>`;
-  });
-  h += '</tbody></table>';
-  wrap.innerHTML = h;
-}
-
-// ══════════════════════════════════════════
-//  ELIMINAR
-// ══════════════════════════════════════════
-async function eliminar(id) {
-  if (!confirm('¿Eliminar este caso?')) return;
-  const { error } = await db.from('casos_perinatales').delete().eq('id', id);
-  if (error) toast('❌ Error', true);
-  else { toast('🗑️ Eliminado'); await cargar(); }
-}
-
-// ══════════════════════════════════════════
-//  EXCEL — helpers de estilo (xlsx-js-style)
-// ══════════════════════════════════════════
-function estiloXLSX({ bgColor = null, fontBold = false, fontColor = '000000',
-                      fontSize = 10, hAlign = 'left', vAlign = 'center',
-                      border = false, wrapText = false } = {}) {
-  const s = {
-    font: { bold: fontBold, color: { rgb: fontColor }, sz: fontSize },
-    alignment: { horizontal: hAlign, vertical: vAlign, wrapText },
-  };
-  if (bgColor) s.fill = { patternType: 'solid', fgColor: { rgb: bgColor } };
-  if (border) {
-    const b = { style: 'thin', color: { rgb: 'CCCCCC' } };
-    s.border = { top: b, bottom: b, left: b, right: b };
-  }
-  return s;
-}
-
-function estilizarRango(ws, rango, estilo) {
-  const [inicio, fin] = rango.split(':');
-  const colInicio = inicio.replace(/\d/g, '');
-  const filInicio = parseInt(inicio.replace(/\D/g, ''));
-  const colFin = fin ? fin.replace(/\d/g, '') : colInicio;
-  const filFin = fin ? parseInt(fin.replace(/\D/g, '')) : filInicio;
-  const colToNum = s => s.split('').reduce((a, ch) => a * 26 + ch.charCodeAt(0) - 64, 0);
-  const numToCol = n => { let s = ''; while (n > 0) { s = String.fromCharCode(((n - 1) % 26) + 65) + s; n = Math.floor((n - 1) / 26); } return s; };
-  for (let r = filInicio; r <= filFin; r++) {
-    for (let c = colToNum(colInicio); c <= colToNum(colFin); c++) {
-      const addr = numToCol(c) + r;
-      if (!ws[addr]) ws[addr] = { v: '', t: 's' };
-      ws[addr].s = estilo;
-    }
-  }
-}
-
-// Colores BABIES (sin # — formato rgb puro)
-const COL = {
-  A: 'C8E6C9', B: 'BBDEFB', C: 'FFF9C4', D: 'FCE4EC',
-  HDR: '0F6E5B', TOT: 'D9D9D9'
-};
-
-// ══════════════════════════════════════════
-//  EXPORTAR EXCEL
-// ══════════════════════════════════════════
-function exportarExcel() {
-  if (typeof XLSX === 'undefined') {
-    alert('❌ La librería XLSX no está cargada. Verifica tu conexión.');
-    return;
-  }
-  if (!todos || todos.length === 0) {
-    alert('⚠️ No hay datos para exportar.');
-    return;
-  }
-
-  try {
-    const wb = XLSX.utils.book_new();
-    const hdrSty  = estiloXLSX({ bgColor: COL.HDR, fontBold: true, fontColor: 'FFFFFF', fontSize: 11, hAlign: 'center', border: true });
-    const totSty  = estiloXLSX({ bgColor: COL.TOT, fontBold: true, border: true, hAlign: 'center' });
-
-    // ── HOJA 1: Base de Datos ──────────────────────────────
-    const enc = ['ID','Fecha Evento','Gestión','Establecimiento','Red / Municipio',
-                 'Distrito','Peso (g)','Tipo de Muerte','Momento','Celda BABIES','Área BABIES','Fecha Registro'];
-    const filas = todos.map(c => [
-      c.id, c.fecha_evento || '', c.año || '', c.establecimiento || '',
-      c.red_municipio || '', c.distrito || '', c.peso || '',
-      c.tipo_muerte || '', c.momento_muerte || '',
-      c.clasificacion || '', c.area_babies || '',
-      c.fecha_registro ? c.fecha_registro.split('T')[0] : ''
-    ]);
-    const ws1 = XLSX.utils.aoa_to_sheet([enc, ...filas]);
-    ws1['!cols'] = [6,13,8,28,20,18,10,14,25,12,30,14].map(w => ({ wch: w }));
-    estilizarRango(ws1, `A1:L1`, hdrSty);
-    todos.forEach((c, i) => {
-      const fila = i + 2;
-      const bg = COL[c.clasificacion] || 'FFFFFF';
-      for (let col = 1; col <= enc.length; col++) {
-        const addr = String.fromCharCode(64 + col) + fila;
-        if (!ws1[addr]) ws1[addr] = { v: '', t: 's' };
-        ws1[addr].s = estiloXLSX({ bgColor: bg, border: true, hAlign: col >= 7 && col <= 10 ? 'center' : 'left' });
-      }
-    });
-    XLSX.utils.book_append_sheet(wb, ws1, 'Base de Datos');
-
-    // ── HOJA 2: Resumen BABIES ─────────────────────────────
-    const cnt = { A: 0, B: 0, C: 0, D: 0 };
-    todos.forEach(c => { if (cnt[c.clasificacion] !== undefined) cnt[c.clasificacion]++; });
-    const tot = todos.length;
-    const pct = n => tot ? ((n / tot) * 100).toFixed(1) + '%' : '0%';
-
-    const ws2 = XLSX.utils.aoa_to_sheet([
-      ['Celda', 'Área BABIES', 'Casos', 'Porcentaje'],
-      ['A', 'Salud Materna (≥2500g + Fetal)',              cnt.A, pct(cnt.A)],
-      ['B', 'Cuidado durante el Parto (≥2500g + Neonatal)',cnt.B, pct(cnt.B)],
-      ['C', 'Cuidado durante el Embarazo (<2500g + Fetal)',cnt.C, pct(cnt.C)],
-      ['D', 'Cuidado del Recién Nacido (<2500g + Neonatal)',cnt.D, pct(cnt.D)],
-      ['TOTAL', '', tot, '100%'],
-    ]);
-    ws2['!cols'] = [{ wch: 8 }, { wch: 50 }, { wch: 10 }, { wch: 12 }];
-    estilizarRango(ws2, 'A1:D1', hdrSty);
-    [['A', 2], ['B', 3], ['C', 4], ['D', 5]].forEach(([cel, row]) => {
-      estilizarRango(ws2, `A${row}:D${row}`, estiloXLSX({ bgColor: COL[cel], fontBold: true, border: true }));
-    });
-    estilizarRango(ws2, 'A6:D6', totSty);
-    XLSX.utils.book_append_sheet(wb, ws2, 'Resumen BABIES');
-
-    // ── HOJA 3: Matriz BABIES ──────────────────────────────
-    const mx = [
-      ['', 'Muerte Fetal', 'Muerte Neonatal', 'TOTAL'],
-      ['≥ 2500 g', 0, 0, 0],
-      ['< 2500 g', 0, 0, 0],
-      ['TOTAL',    0, 0, 0],
-    ];
-    todos.forEach(c => {
-      const r = parseInt(c.peso) >= 2500 ? 1 : 2;
-      const col = c.tipo_muerte === 'Fetal' ? 1 : 2;
-      mx[r][col]++; mx[r][3]++; mx[3][col]++; mx[3][3]++;
-    });
-    const ws3 = XLSX.utils.aoa_to_sheet(mx);
-    ws3['!cols'] = [{ wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 10 }];
-    estilizarRango(ws3, 'A1:D1', hdrSty);
-    // colores BABIES en celdas internas
-    if (ws3['B2']) ws3['B2'].s = estiloXLSX({ bgColor: COL.A, border: true, hAlign: 'center' });
-    if (ws3['C2']) ws3['C2'].s = estiloXLSX({ bgColor: COL.B, border: true, hAlign: 'center' });
-    if (ws3['B3']) ws3['B3'].s = estiloXLSX({ bgColor: COL.C, border: true, hAlign: 'center' });
-    if (ws3['C3']) ws3['C3'].s = estiloXLSX({ bgColor: COL.D, border: true, hAlign: 'center' });
-    ['A2','A3','D2','D3'].forEach(a => { if (!ws3[a]) ws3[a] = { v: '', t: 's' }; ws3[a].s = totSty; });
-    estilizarRango(ws3, 'A4:D4', totSty);
-    XLSX.utils.book_append_sheet(wb, ws3, 'Matriz BABIES');
-
-    // ── HOJA 4: Matriz Momentos ────────────────────────────
-    const moms = ['Anteparto', 'Intraparto', 'Prealta', 'Postalta'];
-    const mm = [
-      ['', ...moms, 'TOTAL'],
-      ['≥ 2500 g', 0, 0, 0, 0, 0],
-      ['< 2500 g', 0, 0, 0, 0, 0],
-      ['TOTAL',    0, 0, 0, 0, 0],
-    ];
-    todos.forEach(c => {
-      const r   = parseInt(c.peso) >= 2500 ? 1 : 2;
-      const idx = moms.findIndex(m => (c.momento_muerte || '').toLowerCase().startsWith(m.toLowerCase()));
-      if (idx === -1) return;
-      mm[r][idx + 1]++; mm[r][5]++; mm[3][idx + 1]++; mm[3][5]++;
-    });
-    const ws4 = XLSX.utils.aoa_to_sheet(mm);
-    ws4['!cols'] = [14, 13, 13, 13, 13, 10].map(w => ({ wch: w }));
-    estilizarRango(ws4, 'A1:F1', hdrSty);
-    estilizarRango(ws4, 'A2:A3', totSty);
-    estilizarRango(ws4, 'B2:E2', estiloXLSX({ bgColor: 'E2EFDA', border: true, hAlign: 'center' }));
-    estilizarRango(ws4, 'B3:E3', estiloXLSX({ bgColor: 'FFF2CC', border: true, hAlign: 'center' }));
-    ['F2','F3'].forEach(a => { if (!ws4[a]) ws4[a] = { v: '', t: 's' }; ws4[a].s = totSty; });
-    estilizarRango(ws4, 'A4:F4', totSty);
-    XLSX.utils.book_append_sheet(wb, ws4, 'Matriz Momentos');
-
-    // ── HOJA 5: Indicadores ────────────────────────────────
-    const ws5 = XLSX.utils.aoa_to_sheet([
-      ['Celda', 'Área BABIES', 'Descripción', 'Casos', '%'],
-      ['A', 'Salud Materna',            'Muertes fetales ≥2500g. Refleja calidad de atención materna prenatal.',       cnt.A, pct(cnt.A)],
-      ['B', 'Cuidado durante el Parto', 'Muertes neonatales ≥2500g. Refleja calidad de atención del parto.',           cnt.B, pct(cnt.B)],
-      ['C', 'Cuidado del Embarazo',     'Muertes fetales <2500g. Refleja calidad de atención de embarazo alto riesgo.', cnt.C, pct(cnt.C)],
-      ['D', 'Cuidado del RN',           'Muertes neonatales <2500g. Refleja calidad de atención neonatal.',             cnt.D, pct(cnt.D)],
-      ['',  'TOTAL', '', tot, '100%'],
-    ]);
-    ws5['!cols'] = [{ wch: 8 }, { wch: 28 }, { wch: 55 }, { wch: 8 }, { wch: 8 }];
-    ws5['!rows'] = [{ hpt: 18 }, { hpt: 40 }, { hpt: 40 }, { hpt: 40 }, { hpt: 40 }, { hpt: 18 }];
-    estilizarRango(ws5, 'A1:E1', hdrSty);
-    [['A', 2], ['B', 3], ['C', 4], ['D', 5]].forEach(([cel, row]) => {
-      estilizarRango(ws5, `A${row}:E${row}`, estiloXLSX({ bgColor: COL[cel], border: true, wrapText: true }));
-      ['A', 'D', 'E'].forEach(col => {
-        const addr = col + row;
-        if (!ws5[addr]) ws5[addr] = { v: '', t: 's' };
-        ws5[addr].s = estiloXLSX({ bgColor: COL[cel], fontBold: col === 'A', border: true, hAlign: 'center', wrapText: true });
-      });
-    });
-    estilizarRango(ws5, 'A6:E6', totSty);
-    XLSX.utils.book_append_sheet(wb, ws5, 'Indicadores');
-
-    // ── Guardar ────────────────────────────────────────────
-    const fecha = new Date().toISOString().split('T')[0];
-    XLSX.writeFile(wb, `BABIES_${fecha}.xlsx`);
-    toast('✅ Excel generado correctamente');
-
-  } catch (err) {
-    console.error('Error exportarExcel:', err);
-    alert('❌ Error al generar Excel:\n' + err.message);
-  }
-}
-
-// ══════════════════════════════════════════
+// ═══════════════════════════════════════════════
 //  ANÁLISIS
-// ══════════════════════════════════════════
-function tasas(lista, n) {
-  const r = { A: 0, B: 0, C: 0, D: 0 };
-  if (!n || !lista.length) return r;
-  ['A','B','C','D'].forEach(c => r[c] = (lista.filter(x => x.clasificacion === c).length / n) * 1000);
-  return r;
+// ═══════════════════════════════════════════════
+function renderAnalisis() {
+  const añoA = document.getElementById('a_año').value;
+  const base  = añoA ? todos.filter(c => String(c.año) === añoA) : todos;
+
+  renderKPIs(base);
+  renderMatrizBabies(base);
+  renderBrecha(base);
 }
 
-function calcAnalisis() {
-  const d1 = document.getElementById('an-d1').value;
-  const n1 = parseFloat(document.getElementById('an-n1').value) || 0;
-  const d2 = document.getElementById('an-d2').value;
-  const n2 = parseFloat(document.getElementById('an-n2').value) || 0;
-  const año = document.getElementById('an-año').value;
-  if (!d1 || !d2 || d1 === d2) { document.getElementById('res-analisis').style.display = 'none'; return; }
-  let f1 = todos.filter(c => c.distrito === d1), f2 = todos.filter(c => c.distrito === d2);
-  if (año) { f1 = f1.filter(c => String(c.año) === año); f2 = f2.filter(c => String(c.año) === año); }
-  document.getElementById('res-analisis').style.display = 'block';
-  const t1 = tasas(f1, n1), t2 = tasas(f2, n2);
-  const mat = document.getElementById('mat-analisis');
-  mat.innerHTML = '';
-  ['A','B','C','D'].forEach(c => {
-    const b = t1[c] - t2[c];
-    mat.innerHTML += `<div class="matrix-cell mc-${c}"><div class="mc-letter">Celda ${c}</div><div class="mc-name">${AREAS[c]}</div><div class="mc-rate">${t1[c].toFixed(2)} ‰</div><div class="mc-brecha">${b > 0.05 ? '🔴' : b < -0.05 ? '🟢' : '⚪'} ${b >= 0 ? '+' : ''}${b.toFixed(2)}</div></div>`;
+function renderKPIs(base) {
+  const celdas = ['A','B','C','D'];
+  const total  = base.length;
+  let html = `<div class="kpi" style="border-top-color:#1a5276">
+    <div class="kpi-num" style="color:#1a5276">${total}</div>
+    <div class="kpi-lbl">Total Muertes Perinatales</div>
+  </div>`;
+  celdas.forEach(c => {
+    const n = base.filter(x => x.clasificacion === c).length;
+    const pct = total > 0 ? ((n/total)*100).toFixed(0) : 0;
+    html += `<div class="kpi ${c}">
+      <div class="kpi-num">${n}</div>
+      <div class="kpi-lbl">Celda ${c} — ${areaBabies(c)}<br/>${pct}% del total</div>
+    </div>`;
   });
-  const ctx = document.getElementById('chart-brecha').getContext('2d');
-  if (cBrecha) cBrecha.destroy();
-  cBrecha = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: ['A','B','C','D'],
-      datasets: [
-        { label: d1, data: ['A','B','C','D'].map(c => +t1[c].toFixed(3)), backgroundColor: '#0f6e5b' },
-        { label: `${d2} (estándar)`, data: ['A','B','C','D'].map(c => +t2[c].toFixed(3)), backgroundColor: '#f4a726' }
-      ]
-    },
-    options: { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { title: { display: true, text: 'Tasa × 1000 NV' } } } }
-  });
+  document.getElementById('kpiGrid').innerHTML = html;
 }
 
-// ══════════════════════════════════════════
-//  INDICADORES
-// ══════════════════════════════════════════
-function renderInd() {
-  const año  = document.getElementById('ind-año').value;
-  const dist = document.getElementById('ind-dist').value;
-  const datos = todos.filter(c => {
-    if (año  && String(c.año) !== año) return false;
-    if (dist && c.distrito !== dist)   return false;
-    return true;
+function renderMatrizBabies(base) {
+  const datos = {};
+  GRUPOS_PESO.forEach(g => {
+    datos[g] = {};
+    MOMENTOS.forEach(m => datos[g][m] = 0);
   });
-  const tot = datos.length || 1;
-  let h = `<table class="ind-table"><thead><tr><th>Celda</th><th>Área BABIES</th><th>Casos</th><th>%</th></tr></thead><tbody>`;
-  ['A','B','C','D'].forEach(c => {
-    const n = datos.filter(x => x.clasificacion === c).length;
-    h += `<tr><td><span class="cel cel-${c}">${c}</span></td><td>${AREAS[c]}</td><td>${n}</td><td>${(n / tot * 100).toFixed(1)}%</td></tr>`;
+  base.forEach(c => {
+    if (!c.peso || !c.momento_muerte) return;
+    const g = grupoPeso(c.peso);
+    const m = c.momento_muerte;
+    if (datos[g] && m in datos[g]) datos[g][m]++;
   });
-  h += `<tr class="tot"><td colspan="2">TOTAL</td><td>${datos.length}</td><td>100%</td></tr></tbody></table>`;
-  document.getElementById('div-ind').innerHTML = h;
+
+  const totalesMomento = {};
+  MOMENTOS.forEach(m => totalesMomento[m] = 0);
+  const totalesGrupo = {};
+  GRUPOS_PESO.forEach(g => totalesGrupo[g] = 0);
+  let gran = 0;
+
+  GRUPOS_PESO.forEach(g => MOMENTOS.forEach(m => {
+    totalesMomento[m] += datos[g][m];
+    totalesGrupo[g]   += datos[g][m];
+    gran += datos[g][m];
+  }));
+
+  const colH = { Anteparto:'#1a5276', Intraparto:'#c0392b', Prealta:'#1e8449', Postalta:'#8e44ad' };
+
+  let html = `<table class="babies-matrix"><thead><tr>
+    <th style="background:#1a5276">Grupo de Peso</th>`;
+  MOMENTOS.forEach(m => html += `<th style="background:${colH[m]}">${m}</th>`);
+  html += `<th style="background:#555">Total</th></tr></thead><tbody>`;
+
+  GRUPOS_PESO.forEach(g => {
+    html += `<tr><td class="row-header">${g}</td>`;
+    MOMENTOS.forEach(m => {
+      const v = datos[g][m];
+      const cc = COL_CLASSES[m];
+      html += `<td class="col-${cc}${v>0?' val':''}">${v > 0 ? v : '—'}</td>`;
+    });
+    html += `<td style="font-weight:700">${totalesGrupo[g] || '—'}</td></tr>`;
+  });
+
+  html += `<tr style="background:#eaf0fb;font-weight:700"><td class="row-header">TOTAL</td>`;
+  MOMENTOS.forEach(m => html += `<td>${totalesMomento[m] || '—'}</td>`);
+  html += `<td style="background:#1a5276;color:#fff">${gran}</td></tr>`;
+  html += `</tbody></table>`;
+
+  // Leyenda colores
+  html += `<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:.78rem">`;
+  MOMENTOS.forEach(m => html += `<span style="color:${colH[m]};font-weight:700">■ ${m}</span>`);
+  html += `</div>`;
+
+  document.getElementById('matrizBabies').innerHTML = html;
 }
 
-// ══════════════════════════════════════════
+function renderBrecha(base) {
+  const total = base.length;
+  if (total === 0) {
+    document.getElementById('brechaDiv').innerHTML = '<div class="alert alert-info">Sin datos para el período seleccionado.</div>';
+    return;
+  }
+  const celdas = ['A','B','C','D'];
+  const colores = { A:'var(--A)', B:'var(--B)', C:'var(--C)', D:'var(--D)' };
+  let html = '';
+  celdas.forEach(c => {
+    const n = base.filter(x => x.clasificacion === c).length;
+    const pct = total > 0 ? ((n/total)*100).toFixed(1) : 0;
+    html += `<div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span><strong style="color:${colores[c]}">Celda ${c}</strong> — ${areaBabies(c)}</span>
+        <span style="font-weight:700">${n} casos (${pct}%)</span>
+      </div>
+      <div class="brecha-bar">
+        <div class="brecha-fill" style="width:${pct}%;background:${colores[c]}"></div>
+      </div>
+    </div>`;
+  });
+
+  // Análisis automático de brecha
+  const maxN = Math.max(...celdas.map(c => base.filter(x => x.clasificacion === c).length));
+  const celdaMayor = celdas.find(c => base.filter(x => x.clasificacion === c).length === maxN);
+  const interpretaciones = {
+    A: 'La mayor brecha está en <b>Salud Materna</b>. Priorizar control prenatal y detección temprana de riesgo materno.',
+    B: 'La mayor brecha está en <b>Cuidado durante el Parto</b>. Revisar protocolos de atención del parto y calificación del personal.',
+    C: 'La mayor brecha está en <b>Cuidado del Embarazo</b> (prematuros). Fortalecer seguimiento de embarazos de alto riesgo.',
+    D: 'La mayor brecha está en <b>Cuidado del Recién Nacido</b>. Reforzar unidades de cuidados neonatales intensivos.'
+  };
+
+  if (celdaMayor && maxN > 0) {
+    html += `<div class="alert alert-info" style="margin-top:10px">
+      📌 <b>Análisis de Brecha:</b> ${interpretaciones[celdaMayor]}
+    </div>`;
+  }
+
+  document.getElementById('brechaDiv').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════
 //  HISTÓRICO
-// ══════════════════════════════════════════
-function renderHist() {
-  const dist  = document.getElementById('hist-dist').value;
-  const datos = dist ? todos.filter(c => c.distrito === dist) : todos;
+// ═══════════════════════════════════════════════
+function renderHistorico() {
+  renderHistGestion();
+  renderHistMes();
+  renderHistMomento();
+}
 
-  const porAño = {};
-  datos.forEach(c => { const a = c.año || '?'; porAño[a] = (porAño[a] || 0) + 1; });
-  const años = Object.keys(porAño).sort();
+function renderHistGestion() {
+  const años = [...new Set(todos.map(c => c.año).filter(Boolean))].sort();
+  if (!años.length) { document.getElementById('histGestion').innerHTML = '<div class="alert alert-info">Sin datos.</div>'; return; }
+  let html = `<table class="hist-table"><thead><tr>
+    <th>Gestión</th><th>Total</th>
+    <th style="color:#9fd3f7">Celda A</th><th style="color:#a8e6be">Celda B</th>
+    <th style="color:#fbd08a">Celda C</th><th style="color:#d4aaef">Celda D</th>
+    <th>% Fetal</th><th>% Neonatal</th>
+  </tr></thead><tbody>`;
+  años.forEach(a => {
+    const g = todos.filter(c => c.año === a);
+    const t = g.length;
+    const A = g.filter(c => c.clasificacion === 'A').length;
+    const B = g.filter(c => c.clasificacion === 'B').length;
+    const C = g.filter(c => c.clasificacion === 'C').length;
+    const D = g.filter(c => c.clasificacion === 'D').length;
+    const pF = t ? ((g.filter(c=>c.tipo_muerte==='Fetal').length/t)*100).toFixed(0)+'%' : '—';
+    const pN = t ? ((g.filter(c=>c.tipo_muerte==='Neonatal').length/t)*100).toFixed(0)+'%' : '—';
+    html += `<tr><td>${a}</td><td><b>${t}</b></td><td>${A}</td><td>${B}</td><td>${C}</td><td>${D}</td><td>${pF}</td><td>${pN}</td></tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('histGestion').innerHTML = html;
+}
 
-  const ctx1 = document.getElementById('chart-hist').getContext('2d');
-  if (cHist) cHist.destroy();
-  cHist = new Chart(ctx1, {
-    type: 'line',
-    data: {
-      labels: años,
-      datasets: [{ label: 'Casos', data: años.map(a => porAño[a]), borderColor: '#0f6e5b', backgroundColor: 'rgba(15,110,91,.15)', borderWidth: 2.5, fill: true, tension: .35, pointRadius: 5, pointBackgroundColor: '#0f6e5b' }]
+const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+function renderHistMes() {
+  const counts = Array(12).fill(0);
+  todos.forEach(c => {
+    if (c.fecha_evento) {
+      const m = new Date(c.fecha_evento).getUTCMonth();
+      counts[m]++;
+    }
+  });
+  const max = Math.max(...counts, 1);
+  let html = `<table class="hist-table"><thead><tr><th>Mes</th><th>Casos</th><th style="min-width:120px">Distribución</th></tr></thead><tbody>`;
+  counts.forEach((n,i) => {
+    const pct = ((n/max)*100).toFixed(0);
+    html += `<tr><td>${MESES[i]}</td><td>${n}</td><td>
+      <div class="brecha-bar"><div class="brecha-fill" style="width:${pct}%;background:var(--verde)"></div></div>
+    </td></tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('histMes').innerHTML = html;
+}
+
+function renderHistMomento() {
+  const colH = { Anteparto:'#1a5276', Intraparto:'#c0392b', Prealta:'#1e8449', Postalta:'#8e44ad' };
+  const total = todos.length;
+  let html = `<table class="hist-table"><thead><tr><th>Momento</th><th>Casos</th><th>%</th><th style="min-width:120px">Distribución</th></tr></thead><tbody>`;
+  MOMENTOS.forEach(m => {
+    const n = todos.filter(c => c.momento_muerte === m).length;
+    const pct = total ? ((n/total)*100).toFixed(1) : 0;
+    html += `<tr><td style="color:${colH[m]};font-weight:700">${m}</td><td>${n}</td><td>${pct}%</td><td>
+      <div class="brecha-bar"><div class="brecha-fill" style="width:${pct}%;background:${colH[m]}"></div></div>
+    </td></tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('histMomento').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════
+//  EXPORTAR EXCEL (5 hojas)
+// ═══════════════════════════════════════════════
+function exportarExcel() {
+  if (!todos.length) { setStatus('⚠️ No hay datos para exportar.', 'warn'); return; }
+  setStatus('⏳ Generando Excel…');
+
+  const wb = XLSX.utils.book_new();
+  const hStyle = { font:{bold:true,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'1A5276'}}, alignment:{horizontal:'center'} };
+  const cellStyles = { A:{rgb:'2980B9'}, B:{rgb:'27AE60'}, C:{rgb:'E67E22'}, D:{rgb:'8E44AD'} };
+
+  // ── Hoja 1: Base de Datos ──
+  const h1 = [['ID','Fecha Evento','Establecimiento','Red/Municipio','Distrito','Peso (g)','Grupo Peso','Tipo Muerte','Momento','Año','Celda','Área BABIES','Fecha Registro']];
+  todos.forEach(c => h1.push([
+    c.id, c.fecha_evento, c.establecimiento, c.red_municipio, c.distrito,
+    c.peso, c.peso ? grupoPeso(c.peso) : '', c.tipo_muerte, c.momento_muerte,
+    c.año, c.clasificacion, c.area_babies, c.fecha_registro
+  ]));
+  const ws1 = XLSX.utils.aoa_to_sheet(h1);
+  h1[0].forEach((_,i) => {
+    const addr = XLSX.utils.encode_cell({r:0,c:i});
+    ws1[addr] = ws1[addr] || {};
+    ws1[addr].s = hStyle;
+  });
+  todos.forEach((_,ri) => {
+    const cl = todos[ri].clasificacion;
+    if (!cl || !cellStyles[cl]) return;
+    const addr = XLSX.utils.encode_cell({r:ri+1,c:10});
+    ws1[addr] = ws1[addr] || {};
+    ws1[addr].s = { font:{bold:true,color:{rgb:cellStyles[cl].rgb}}, alignment:{horizontal:'center'} };
+  });
+  XLSX.utils.book_append_sheet(wb, ws1, 'Base de Datos');
+
+  // ── Hoja 2: Resumen por Celda ──
+  const años = [...new Set(todos.map(c=>c.año).filter(Boolean))].sort();
+  const h2 = [['Celda','Área','Total','% del Total']];
+  ['A','B','C','D'].forEach(c => {
+    const n = todos.filter(x => x.clasificacion === c).length;
+    h2.push([c, areaBabies(c), n, todos.length ? ((n/todos.length)*100).toFixed(1)+'%' : '0%']);
+  });
+  h2.push(['TOTAL','',todos.length,'100%']);
+  const ws2 = XLSX.utils.aoa_to_sheet(h2);
+  h2[0].forEach((_,i) => {
+    const a = XLSX.utils.encode_cell({r:0,c:i});
+    ws2[a] = ws2[a]||{}; ws2[a].s = hStyle;
+  });
+  XLSX.utils.book_append_sheet(wb, ws2, 'Resumen por Celda');
+
+  // ── Hoja 3: Matriz BABIES Oficial (5 grupos × 4 momentos) ──
+  const h3 = [['Grupo de Peso', 'Anteparto', 'Intraparto', 'Prealta', 'Postalta', 'TOTAL']];
+  const matrizData = {};
+  GRUPOS_PESO.forEach(g => { matrizData[g] = {}; MOMENTOS.forEach(m => matrizData[g][m] = 0); });
+  todos.forEach(c => {
+    if (!c.peso || !c.momento_muerte) return;
+    const g = grupoPeso(c.peso);
+    const m = c.momento_muerte;
+    if (matrizData[g] && m in matrizData[g]) matrizData[g][m]++;
+  });
+  const totM = {}; MOMENTOS.forEach(m => totM[m] = 0);
+  GRUPOS_PESO.forEach(g => {
+    const row = [g];
+    let rowT = 0;
+    MOMENTOS.forEach(m => { row.push(matrizData[g][m]); totM[m] += matrizData[g][m]; rowT += matrizData[g][m]; });
+    row.push(rowT);
+    h3.push(row);
+  });
+  const totRow = ['TOTAL', ...MOMENTOS.map(m=>totM[m]), MOMENTOS.reduce((s,m)=>s+totM[m],0)];
+  h3.push(totRow);
+  const ws3 = XLSX.utils.aoa_to_sheet(h3);
+  const colColors3 = {1:'2471A3',2:'C0392B',3:'1E8449',4:'8E44AD'};
+  h3[0].forEach((_,i) => {
+    const a = XLSX.utils.encode_cell({r:0,c:i});
+    ws3[a] = ws3[a]||{};
+    const bg = colColors3[i] || '1A5276';
+    ws3[a].s = { font:{bold:true,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:bg}}, alignment:{horizontal:'center'} };
+  });
+  XLSX.utils.book_append_sheet(wb, ws3, 'Matriz BABIES Oficial');
+
+  // ── Hoja 4: Histórico por Gestión ──
+  const h4 = [['Gestión','Total','Celda A','Celda B','Celda C','Celda D','Mort. Fetal','Mort. Neonatal']];
+  años.forEach(a => {
+    const g = todos.filter(c => c.año === a);
+    h4.push([a, g.length,
+      g.filter(c=>c.clasificacion==='A').length,
+      g.filter(c=>c.clasificacion==='B').length,
+      g.filter(c=>c.clasificacion==='C').length,
+      g.filter(c=>c.clasificacion==='D').length,
+      g.filter(c=>c.tipo_muerte==='Fetal').length,
+      g.filter(c=>c.tipo_muerte==='Neonatal').length
+    ]);
+  });
+  const ws4 = XLSX.utils.aoa_to_sheet(h4);
+  h4[0].forEach((_,i) => {
+    const a = XLSX.utils.encode_cell({r:0,c:i});
+    ws4[a] = ws4[a]||{}; ws4[a].s = hStyle;
+  });
+  XLSX.utils.book_append_sheet(wb, ws4, 'Histórico por Gestión');
+
+  // ── Hoja 5: Tasas Ministerio ──
+  const nv = parseInt(document.getElementById('nv_valor').value) || 0;
+  const añoNV = document.getElementById('nv_año').value;
+  const baseNV = añoNV ? todos.filter(c => String(c.año) === añoNV) : todos;
+  const h5 = [['Indicador','Numerador','Denominador','Tasa x 1000 NV','Interpretación']];
+  const tasas = [
+    ['Mort. Salud Materna (Celda A)', baseNV.filter(c=>c.clasificacion==='A').length, nv, 'Óbitos fetales ≥2500g / NV'],
+    ['Mort. Cuidados Prenatales (Celda C)', baseNV.filter(c=>c.clasificacion==='C').length, nv, 'Óbitos fetales <2500g / NV'],
+    ['Mort. Intraparto (Celda A+C Intraparto)', baseNV.filter(c=>c.momento_muerte==='Intraparto').length, nv, 'Total muertes intraparto / NV'],
+    ['Mort. RN Institucional (Prealta)', baseNV.filter(c=>c.momento_muerte==='Prealta').length, nv, 'Muertes neonatales antes del alta / NV'],
+    ['Mort. Neonatal Tardía (Postalta)', baseNV.filter(c=>c.momento_muerte==='Postalta').length, nv, 'Muertes neonatales después del alta / NV'],
+    ['Mort. Perinatal Total', baseNV.length, nv, 'Total muertes perinatales / NV']
+  ];
+  tasas.forEach(([ind, num, den, interp]) => {
+    const tasa = den > 0 ? ((num/den)*1000).toFixed(2) : 'N/D (ingresar NV)';
+    h5.push([ind, num, den || '(ingresar)', tasa, interp]);
+  });
+  const ws5 = XLSX.utils.aoa_to_sheet(h5);
+  h5[0].forEach((_,i) => {
+    const a = XLSX.utils.encode_cell({r:0,c:i});
+    ws5[a] = ws5[a]||{}; ws5[a].s = hStyle;
+  });
+  XLSX.utils.book_append_sheet(wb, ws5, 'Tasas Ministerio');
+
+  // Generar archivo
+  const fecha = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  XLSX.writeFile(wb, 'BABIES_HospLaPortada_' + fecha + '.xlsx');
+  setStatus('✅ Excel exportado con 5 hojas correctamente', 'ok');
+}
+
+// ═══════════════════════════════════════════════
+//  EXPORTAR PDF OFICIAL MINISTERIO
+// ═══════════════════════════════════════════════
+function exportarPDF() {
+  if (!todos.length) { setStatus('⚠️ No hay datos para exportar.', 'warn'); return; }
+  if (typeof window.jspdf === 'undefined') {
+    setStatus('❌ Librería jsPDF no cargada. Verificar conexión a internet.', 'error');
+    return;
+  }
+  setStatus('⏳ Generando PDF Oficial…');
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+
+  const añoPDF = document.getElementById('a_año').value;
+  const basePDF = añoPDF ? todos.filter(c => String(c.año) === añoPDF) : todos;
+  const nv = parseInt(document.getElementById('nv_valor').value) || 0;
+  const periodoLabel = añoPDF || 'Todos los años';
+  const hoy = new Date().toLocaleDateString('es-BO', {day:'2-digit',month:'long',year:'numeric'});
+
+  let y = 0;
+
+  // ── Encabezado ──
+  doc.setFillColor(26, 82, 118);
+  doc.rect(0, 0, 210, 28, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(14); doc.setFont('helvetica','bold');
+  doc.text('ANÁLISIS DE MORTALIDAD PERINATAL — MÉTODO BABIES', 105, 11, {align:'center'});
+  doc.setFontSize(10); doc.setFont('helvetica','normal');
+  doc.text('Hospital Municipal La Portada | La Paz, Bolivia', 105, 18, {align:'center'});
+  doc.text('Período: ' + periodoLabel + '   |   Fecha de emisión: ' + hoy, 105, 24, {align:'center'});
+
+  y = 34;
+  doc.setTextColor(0,0,0);
+
+  // ── Tabla 1: Resumen por Celda ──
+  doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.setTextColor(26,82,118);
+  doc.text('TABLA 1 — Indicadores por Celda BABIES', 14, y); y += 5;
+  doc.setTextColor(0,0,0);
+
+  const total = basePDF.length;
+  const celdaData = ['A','B','C','D'].map(c => {
+    const n = basePDF.filter(x=>x.clasificacion===c).length;
+    const pct = total ? ((n/total)*100).toFixed(1)+'%' : '0%';
+    const tasa = nv > 0 ? ((n/nv)*1000).toFixed(2) : '—';
+    return [c, areaBabies(c), String(n), pct, tasa];
+  });
+  celdaData.push(['TOTAL','Mortalidad Perinatal', String(total), '100%', nv>0 ? ((total/nv)*1000).toFixed(2):'—']);
+
+  const cellColors = {
+    0: [41,128,185],  // A azul
+    1: [39,174,96],   // B verde
+    2: [230,126,34],  // C naranja
+    3: [142,68,173],  // D morado
+    4: [52,73,94]     // total
+  };
+
+  doc.autoTable({
+    startY: y,
+    head: [['Celda','Área BABIES','N° Casos','% del Total','Tasa x 1000 NV']],
+    body: celdaData,
+    styles: { fontSize: 9, cellPadding: 3 },
+    headStyles: { fillColor: [26,82,118], textColor:[255,255,255], fontStyle:'bold' },
+    columnStyles: { 0:{halign:'center',fontStyle:'bold'}, 2:{halign:'center'}, 3:{halign:'center'}, 4:{halign:'center'} },
+    didParseCell: function(data) {
+      if (data.section === 'body' && data.column.index === 0) {
+        const ri = data.row.index;
+        if (ri < 4 && cellColors[ri]) {
+          data.cell.styles.textColor = cellColors[ri];
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
     },
-    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+    margin: { left: 14, right: 14 }
   });
 
-  // Por mes
-  const añoAct = new Date().getFullYear();
-  const MES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  const pm = new Array(12).fill(0);
-  datos.filter(c => c.año === añoAct).forEach(c => { const m = new Date(c.fecha_registro).getMonth(); if (!isNaN(m)) pm[m]++; });
-  const mx = Math.max(...pm, 1);
-  const d = document.getElementById('div-mensual');
-  d.innerHTML = '';
-  MES.forEach((mes, i) => {
-    d.innerHTML += `<div class="hist-row"><div class="hist-label">${mes} ${añoAct}</div><div class="hist-bar" style="width:${pm[i] / mx * 100}%;${pm[i] ? 'min-width:6px' : ''}"></div><div class="hist-count">${pm[i]}</div></div>`;
-  });
+  y = doc.lastAutoTable.finalY + 8;
 
-  // Por momento
-  const MOM = ['Anteparto','Intraparto','Prealta','Postalta'];
-  const ctx2 = document.getElementById('chart-mom').getContext('2d');
-  if (cMom) cMom.destroy();
-  cMom = new Chart(ctx2, {
-    type: 'doughnut',
-    data: {
-      labels: MOM,
-      datasets: [{ data: MOM.map(m => datos.filter(c => c.momento_muerte === m).length), backgroundColor: ['#f4a726','#e05252','#1a9076','#880e4f'] }]
+  // ── Tabla 2: Matriz BABIES Oficial ──
+  doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.setTextColor(26,82,118);
+  doc.text('TABLA 2 — Matriz BABIES Oficial (5 Grupos de Peso × 4 Momentos)', 14, y); y += 5;
+
+  const matrizData2 = {};
+  GRUPOS_PESO.forEach(g => { matrizData2[g] = {}; MOMENTOS.forEach(m => matrizData2[g][m] = 0); });
+  basePDF.forEach(c => {
+    if (!c.peso || !c.momento_muerte) return;
+    const g = grupoPeso(c.peso); const m = c.momento_muerte;
+    if (matrizData2[g] && m in matrizData2[g]) matrizData2[g][m]++;
+  });
+  const totM2 = {}; MOMENTOS.forEach(m => totM2[m] = 0);
+  const matrizRows = GRUPOS_PESO.map(g => {
+    let rowT = 0;
+    const row = [g];
+    MOMENTOS.forEach(m => { row.push(matrizData2[g][m]||0); totM2[m] += matrizData2[g][m]; rowT += matrizData2[g][m]; });
+    row.push(rowT);
+    return row;
+  });
+  matrizRows.push(['TOTAL', ...MOMENTOS.map(m=>totM2[m]), MOMENTOS.reduce((s,m)=>s+totM2[m],0)]);
+
+  const momentoColors = [[36,113,163],[192,57,43],[30,132,73],[142,68,173]];
+
+  doc.autoTable({
+    startY: y,
+    head: [['Grupo de Peso', 'Anteparto', 'Intraparto', 'Prealta', 'Postalta', 'TOTAL']],
+    body: matrizRows,
+    styles: { fontSize: 8.5, cellPadding: 2.5, halign:'center' },
+    headStyles: { fillColor: [26,82,118], textColor:[255,255,255], fontStyle:'bold' },
+    columnStyles: { 0:{halign:'left', fontStyle:'bold'} },
+    didParseCell: function(data) {
+      if (data.section === 'head' && data.column.index >= 1 && data.column.index <= 4) {
+        data.cell.styles.fillColor = momentoColors[data.column.index - 1];
+      }
+      if (data.section === 'body') {
+        if (data.row.index === matrizRows.length - 1) {
+          data.cell.styles.fillColor = [189,195,199]; data.cell.styles.fontStyle = 'bold';
+        }
+      }
     },
-    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+    margin: { left: 14, right: 14 }
   });
+
+  y = doc.lastAutoTable.finalY + 8;
+
+  // ── Tabla 3: Tasas Oficiales ──
+  if (y > 230) { doc.addPage(); y = 20; }
+  doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.setTextColor(26,82,118);
+  doc.text('TABLA 3 — Tasas de Mortalidad (R.M. N°1772/2013)', 14, y); y += 5;
+
+  const tasasPDF = [
+    ['Mortalidad por Salud Materna (A)', basePDF.filter(c=>c.clasificacion==='A').length],
+    ['Mortalidad por Cuidados Prenatales (C)', basePDF.filter(c=>c.clasificacion==='C').length],
+    ['Mortalidad Intraparto', basePDF.filter(c=>c.momento_muerte==='Intraparto').length],
+    ['Mortalidad Neonatal Institucional (Prealta)', basePDF.filter(c=>c.momento_muerte==='Prealta').length],
+    ['Mortalidad Neonatal Tardía (Postalta)', basePDF.filter(c=>c.momento_muerte==='Postalta').length],
+    ['Mortalidad Perinatal Total', total]
+  ];
+  const tasasRows = tasasPDF.map(([ind, num]) => [
+    ind, String(num), nv > 0 ? String(nv) : '—', nv > 0 ? ((num/nv)*1000).toFixed(2) : 'Ingresar NV'
+  ]);
+
+  doc.autoTable({
+    startY: y,
+    head: [['Indicador','N° Casos','Nacidos Vivos','Tasa x 1000 NV']],
+    body: tasasRows,
+    styles: { fontSize: 9, cellPadding: 3 },
+    headStyles: { fillColor: [26,82,118], textColor:[255,255,255], fontStyle:'bold' },
+    columnStyles: { 1:{halign:'center'}, 2:{halign:'center'}, 3:{halign:'center',fontStyle:'bold'} },
+    margin: { left: 14, right: 14 }
+  });
+
+  y = doc.lastAutoTable.finalY + 8;
+
+  // ── Conclusiones automáticas ──
+  if (y > 240) { doc.addPage(); y = 20; }
+  const celdaMayorN = Math.max(...['A','B','C','D'].map(c => basePDF.filter(x=>x.clasificacion===c).length));
+  const celdaMayor  = ['A','B','C','D'].find(c => basePDF.filter(x=>x.clasificacion===c).length === celdaMayorN);
+  const interpretaciones2 = {
+    A: 'La principal brecha está en Salud Materna (Celda A). Se recomienda reforzar el control prenatal y la detección oportuna de riesgo materno.',
+    B: 'La principal brecha está en Cuidado durante el Parto (Celda B). Se recomienda revisar los protocolos de atención del parto.',
+    C: 'La principal brecha está en Cuidado durante el Embarazo (Celda C). Se recomienda fortalecer el seguimiento de embarazos de alto riesgo.',
+    D: 'La principal brecha está en Cuidado del Recién Nacido (Celda D). Se recomienda reforzar las unidades de cuidados neonatales.'
+  };
+
+  doc.setFillColor(234,240,251);
+  doc.roundedRect(14, y, 182, 28, 3, 3, 'F');
+  doc.setFontSize(10); doc.setFont('helvetica','bold');
+  doc.setTextColor(26,82,118);
+  doc.text('CONCLUSIONES Y RECOMENDACIONES', 20, y+7);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  doc.setTextColor(0,0,0);
+  if (celdaMayor) {
+    const lines = doc.splitTextToSize('• ' + interpretaciones2[celdaMayor], 170);
+    doc.text(lines, 20, y+14);
+  }
+  doc.text('• Total de muertes perinatales registradas en el período: ' + total, 20, y + (celdaMayor ? 20 : 14));
+  y += 34;
+
+  // ── Firmas ──
+  if (y > 255) { doc.addPage(); y = 20; }
+  doc.setDrawColor(150,150,150);
+  doc.line(20, y+20, 85, y+20);
+  doc.line(125, y+20, 190, y+20);
+  doc.setFontSize(8.5); doc.setTextColor(80,80,80);
+  doc.text('Director/a del Hospital', 52, y+25, {align:'center'});
+  doc.text('Responsable BABIES / Epidemiología', 157, y+25, {align:'center'});
+  doc.text('Nombre y sello', 52, y+30, {align:'center'});
+  doc.text('Nombre y sello', 157, y+30, {align:'center'});
+
+  // ── Pie de página ──
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(7.5); doc.setTextColor(130,130,130);
+    doc.text('Hospital Municipal La Portada — Análisis BABIES — R.M. N°1772/2013', 14, 292);
+    doc.text('Pág. ' + i + ' / ' + pageCount, 196, 292, {align:'right'});
+  }
+
+  const fechaPDF = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  doc.save('InformeBABIES_HospLaPortada_' + fechaPDF + '.pdf');
+  setStatus('✅ PDF Oficial generado y descargado correctamente', 'ok');
 }
 
-// ══════════════════════════════════════════
-//  TABS + TOAST
-// ══════════════════════════════════════════
-function showTab(tab) {
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + tab).classList.add('active');
-  const idx = ['registrar','datos','analisis','historico'].indexOf(tab);
-  document.querySelectorAll('nav button')[idx].classList.add('active');
+// ═══════════════════════════════════════════════
+//  INICIALIZACIÓN
+// ═══════════════════════════════════════════════
+document.getElementById('r_año').value = new Date().getFullYear();
+
+// Registrar Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(e => console.warn('SW error:', e));
 }
 
-let tT;
-function toast(msg, err = false) {
-  const el = document.getElementById('toast');
-  el.textContent = msg; el.className = err ? 'error show' : 'show';
-  clearTimeout(tT); tT = setTimeout(() => el.classList.remove('show', 'error'), 2800);
-}
+// Cargar datos al iniciar
+cargarCasos();
 </script>
 </body>
 </html>
