@@ -1,4 +1,4 @@
-const CACHE_NAME = 'babies-pwa-v10';
+const CACHE_NAME = 'babies-pwa-v11';
 const ASSETS = [
   './',
   './index.html',
@@ -24,12 +24,14 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  // Para Supabase: siempre red primero
-  if (event.request.url.includes('supabase.co')) {
+  // Firebase / Firestore: siempre red primero
+  if (event.request.url.includes('firestore.googleapis.com') ||
+      event.request.url.includes('firebase') ||
+      event.request.url.includes('gstatic.com/firebasejs')) {
     event.respondWith(fetch(event.request).catch(() => new Response('', {status:503})));
     return;
   }
-  // Para CDN scripts: red primero, caché como fallback
+  // CDN scripts: red primero, caché como fallback
   if (event.request.url.includes('cdn.jsdelivr.net') ||
       event.request.url.includes('cdnjs.cloudflare.com')) {
     event.respondWith(

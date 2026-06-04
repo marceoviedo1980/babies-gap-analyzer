@@ -473,40 +473,33 @@
   </div>
 </div>
 
-<script>
+<script type="module">
 // ═══════════════════════════════════════════════
-//  CONFIGURACIÓN SUPABASE
+//  CONFIGURACIÓN FIREBASE
 // ═══════════════════════════════════════════════
-const SUPA_URL = 'https://ocmjkntwnkyoggjgshah.supabase.co';
-const SUPA_KEY = 'sb_publishable_LUI7t1qJUdU86VE_cxYo7w_7xlkCfVi';
-const TABLA   = 'casos_perinatales';
+import { initializeApp }                        from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getFirestore, collection, getDocs,
+         addDoc, doc, updateDoc, deleteDoc,
+         orderBy, query }                       from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+const FB_CONFIG = {
+  apiKey:            "AIzaSyDbkGy3xCZ66SYlmWXR1zR9zLa9e01esWE",
+  authDomain:        "babies-laportada.firebaseapp.com",
+  projectId:         "babies-laportada",
+  storageBucket:     "babies-laportada.firebasestorage.app",
+  messagingSenderId: "430088768129",
+  appId:             "1:430088768129:web:4b579153f3c98f51e1db80"
+};
+
+const fbApp = initializeApp(FB_CONFIG);
+const db    = getFirestore(fbApp);
+const TABLA = 'casos_perinatales';   // nombre de la colección en Firestore
 
 // ═══════════════════════════════════════════════
 //  ESTADO GLOBAL
 // ═══════════════════════════════════════════════
 let todos = [];          // todos los casos cargados
 let filtrados = [];      // casos después de filtros
-
-// ═══════════════════════════════════════════════
-//  HELPERS SUPABASE
-// ═══════════════════════════════════════════════
-async function supaFetch(path, options = {}) {
-  const url = SUPA_URL + '/rest/v1/' + path;
-  const headers = {
-    'apikey': SUPA_KEY,
-    'Authorization': 'Bearer ' + SUPA_KEY,
-    'Content-Type': 'application/json',
-    'Prefer': 'return=representation',
-    ...options.headers
-  };
-  const res = await fetch(url, { ...options, headers });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error('Supabase error ' + res.status + ': ' + err);
-  }
-  if (res.status === 204) return [];
-  return res.json();
-}
 
 // ═══════════════════════════════════════════════
 //  LÓGICA BABIES
@@ -570,11 +563,12 @@ function setStatus(msg, tipo = 'info') {
 //  CARGAR CASOS
 // ═══════════════════════════════════════════════
 async function cargarCasos() {
-  setStatus('⏳ Cargando casos desde Supabase…');
+  setStatus('⏳ Cargando casos desde Firebase…');
   document.getElementById('tablaContenedor').innerHTML = '<div class="alert alert-info">Cargando…</div>';
   try {
-    const data = await supaFetch(TABLA + '?order=fecha_evento.desc&select=*');
-    todos = data;
+    const q = query(collection(db, TABLA), orderBy('fecha_evento', 'desc'));
+    const snap = await getDocs(q);
+    todos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     populateSelectores();
     aplicarFiltros();
     renderAnalisis();
@@ -583,7 +577,7 @@ async function cargarCasos() {
   } catch(e) {
     setStatus('❌ Error al cargar: ' + e.message, 'error');
     document.getElementById('tablaContenedor').innerHTML =
-      '<div class="alert alert-danger">Error al conectar con Supabase: ' + e.message + '</div>';
+      '<div class="alert alert-danger">Error al conectar con Firebase: ' + e.message + '</div>';
   }
 }
 
@@ -671,8 +665,8 @@ function renderTabla() {
       <td class="cell-${cl}">${cl}</td>
       <td>${areaBabies(cl)}</td>
       <td>
-        <button class="btn btn-sm btn-primary" onclick="abrirEditar(${c.id})">✏️</button>
-        <button class="btn btn-sm btn-danger"  onclick="abrirEliminar(${c.id})" style="margin-left:4px">🗑</button>
+        <button class="btn btn-sm btn-primary" onclick="abrirEditar('${c.id}')">✏️</button>
+        <button class="btn btn-sm btn-danger"  onclick="abrirEliminar('${c.id}')" style="margin-left:4px">🗑</button>
       </td>
     </tr>`;
   });
@@ -736,7 +730,7 @@ async function registrarCaso() {
 
   setStatus('⏳ Guardando caso…');
   try {
-    await supaFetch(TABLA, { method: 'POST', body: JSON.stringify(payload) });
+    await addDoc(collection(db, TABLA), payload);
     setStatus('✅ Caso registrado correctamente (Celda ' + clasif + ')', 'ok');
     limpiarFormRegistro();
     await cargarCasos();
@@ -768,7 +762,7 @@ function cerrarModal() {
 }
 
 async function guardarEdicion() {
-  const id      = parseInt(document.getElementById('e_id').value);
+  const id      = document.getElementById('e_id').value;   // string (doc ID Firestore)
   const peso    = parseInt(document.getElementById('e_peso').value);
   const tipo    = document.getElementById('e_tipo').value;
   const momento = document.getElementById('e_momento').value;
@@ -787,7 +781,7 @@ async function guardarEdicion() {
 
   setStatus('⏳ Actualizando caso…');
   try {
-    await supaFetch(TABLA + '?id=eq.' + id, { method: 'PATCH', body: JSON.stringify(payload) });
+    await updateDoc(doc(db, TABLA, id), payload);
     setStatus('✅ Caso actualizado correctamente', 'ok');
     cerrarModal();
     await cargarCasos();
@@ -809,10 +803,10 @@ function cerrarModalEliminar() {
 }
 
 async function confirmarEliminar() {
-  const id = parseInt(document.getElementById('del_id').value);
+  const id = document.getElementById('del_id').value;   // string (doc ID de Firestore)
   setStatus('⏳ Eliminando caso…');
   try {
-    await supaFetch(TABLA + '?id=eq.' + id, { method: 'DELETE' });
+    await deleteDoc(doc(db, TABLA, id));
     setStatus('✅ Caso eliminado correctamente', 'ok');
     cerrarModalEliminar();
     await cargarCasos();
@@ -1489,6 +1483,22 @@ document.getElementById('r_año').value = new Date().getFullYear();
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(e => console.warn('SW error:', e));
 }
+
+// Exponer funciones al scope global (necesario por type="module")
+window.showTab          = showTab;
+window.registrarCaso    = registrarCaso;
+window.limpiarFormRegistro = limpiarFormRegistro;
+window.aplicarFiltros   = aplicarFiltros;
+window.cargarCasos      = cargarCasos;
+window.abrirEditar      = abrirEditar;
+window.cerrarModal      = cerrarModal;
+window.guardarEdicion   = guardarEdicion;
+window.abrirEliminar    = abrirEliminar;
+window.cerrarModalEliminar = cerrarModalEliminar;
+window.confirmarEliminar = confirmarEliminar;
+window.actualizarPanelNV = actualizarPanelNV;
+window.exportarExcel    = exportarExcel;
+window.exportarPDF      = exportarPDF;
 
 // Cargar datos al iniciar
 cargarCasos();
