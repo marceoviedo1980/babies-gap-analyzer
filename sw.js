@@ -1,4 +1,4 @@
-const CACHE_NAME = 'babies-pwa-v11';
+const CACHE_NAME = 'babies-pwa-v12';
 const ASSETS = [
   './',
   './index.html',
